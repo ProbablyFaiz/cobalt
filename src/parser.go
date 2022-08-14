@@ -1,9 +1,8 @@
-package parser
+package src
 
 import (
 	"github.com/alecthomas/participle/v2"
 	"github.com/alecthomas/participle/v2/lexer"
-	"pasado/base"
 	"strings"
 )
 
@@ -32,7 +31,7 @@ type FunctionCall struct {
 	Args []*Argument `LPar ( @@ Sep )* @@? RPar`
 }
 
-func Parse(input string) (base.FormulaNode, error) {
+func Parse(input string) (FormulaNode, error) {
 	langLexer := lexer.MustSimple([]lexer.SimpleRule{
 		{"Eq", `=`},
 		{"Sep", `,`},
@@ -68,35 +67,35 @@ func Parse(input string) (base.FormulaNode, error) {
 	return formula.toAst(), nil
 }
 
-func (formula *Formula) toAst() base.FormulaNode {
+func (formula *Formula) toAst() FormulaNode {
 	if formula.Argument != nil {
 		return formula.Argument.toAst()
 	}
 	return formula.ValueLiteral.toAst()
 }
 
-func (argument *Argument) toAst() base.FormulaNode {
+func (argument *Argument) toAst() FormulaNode {
 	if argument.FunctionCall != nil {
 		return argument.FunctionCall.toAst()
 	}
 	return argument.ValueLiteral.toAst()
 }
 
-func (literal *BareLiteral) toAst() base.FormulaNode {
-	return &base.LiteralNode{Value: *literal.IntLiteral}
+func (literal *BareLiteral) toAst() FormulaNode {
+	return &LiteralNode{Value: *literal.IntLiteral}
 }
 
-func (literal *ArgLiteral) toAst() base.FormulaNode {
+func (literal *ArgLiteral) toAst() FormulaNode {
 	if literal.StringLiteral != nil {
-		return &base.LiteralNode{Value: *literal.StringLiteral}
+		return &LiteralNode{Value: *literal.StringLiteral}
 	}
-	return &base.LiteralNode{Value: *literal.IntLiteral}
+	return &LiteralNode{Value: *literal.IntLiteral}
 }
 
-func (call *FunctionCall) toAst() base.FormulaNode {
-	newArgs := make([]base.FormulaNode, len(call.Args))
+func (call *FunctionCall) toAst() FormulaNode {
+	newArgs := make([]FormulaNode, len(call.Args))
 	for i, arg := range call.Args {
 		newArgs[i] = arg.toAst()
 	}
-	return &base.FunctionNode{Name: strings.ToLower(*call.Name), Args: newArgs}
+	return &FunctionNode{Name: strings.ToLower(*call.Name), Args: newArgs}
 }

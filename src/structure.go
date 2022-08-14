@@ -1,4 +1,4 @@
-package base
+package src
 
 type Spreadsheet struct {
 	Sheets map[string]*Sheet
@@ -20,7 +20,7 @@ type Cell struct {
 }
 
 type FormulaNode interface {
-	Eval(ctx *EvalContext) interface{}
+	Eval(ctx *EvalContext) (interface{}, error)
 }
 
 type LiteralNode struct {
