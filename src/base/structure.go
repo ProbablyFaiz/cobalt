@@ -1,4 +1,4 @@
-package main
+package base
 
 type Spreadsheet struct {
 	Sheets map[string]*Sheet
@@ -31,8 +31,14 @@ type LiteralNode struct {
 }
 
 type ReferenceNode struct {
-	// TODO: Do we want to resolve referenced cells at parse-time or eval-time?
-	Cell *Cell
+	Row   int
+	Col   int
+	Sheet *Sheet // If nil, then the cell is in the current sheet
+}
+
+type FunctionNode struct {
+	Name string
+	Args []FormulaNode
 }
 
 type EvalContext struct {
