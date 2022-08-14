@@ -20,5 +20,10 @@ func (rn ReferenceNode) Eval(ctx *EvalContext) interface{} {
 	} else {
 		sheetRef = ctx.Cell.Sheet
 	}
-	return sheetRef.Cells[rn.Row][rn.Col].Value
+	return sheetRef.Cells[rn.Row][rn.Col].GetValue()
+}
+
+func (fn FunctionNode) Eval(ctx *EvalContext) interface{} {
+	// TODO
+	return 0
 }

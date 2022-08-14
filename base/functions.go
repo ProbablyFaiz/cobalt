@@ -2,6 +2,17 @@ package base
 
 import "fmt"
 
+func ExecuteFn(fnName string, args []interface{}) (interface{}, error) {
+	switch fnName {
+	case "concat":
+		return Concat(args)
+	case "add":
+		return Add(args)
+	default:
+		return nil, fmt.Errorf("execute: unknown function %s", fnName)
+	}
+}
+
 func Concat(args []interface{}) (string, error) {
 	var result string
 	for i, arg := range args {
