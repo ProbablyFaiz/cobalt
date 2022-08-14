@@ -13,13 +13,10 @@ type Cell struct {
 	Sheet *Sheet
 	// Value can be a string, int, float, bool, or nil
 	Value      interface{}
-	Formula    FormulaAst
+	Formula    FormulaNode
 	RawContent string
 	Dirty      bool
-}
-
-type FormulaAst struct {
-	Root FormulaNode
+	Dependents []*Cell
 }
 
 type FormulaNode interface {

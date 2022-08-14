@@ -1,5 +1,14 @@
 package base
 
+func (cell Cell) GetValue() interface{} {
+	if cell.Dirty {
+		// TODO: parse cell.RawContent
+		cell.Value = cell.Formula.Eval(&EvalContext{Cell: &cell})
+		cell.Dirty = false
+	}
+	return cell.Value
+}
+
 func (ln LiteralNode) Eval(ctx *EvalContext) interface{} {
 	return ln.Value
 }
