@@ -1,27 +1,31 @@
 package src
 
-func (cell Cell) GetValue() (interface{}, error) {
-	if cell.Dirty {
+func (cell *Cell) GetValue() (interface{}, error) {
+	spreadsheet := cell.Sheet.Spreadsheet
+	if spreadsheet.DirtySet.Contains(cell.Uuid) {
 		formula, err := Parse(cell.RawContent)
 		if err != nil {
 			return nil, err
 		}
-		cell.Formula = formula
-		res, err := cell.Formula.Eval(&EvalContext{Cell: &cell})
+		cell.Formula = &formula
+		if err != nil {
+			return nil, err
+		}
+		res, err := (*cell.Formula).Eval(&EvalContext{Cell: cell})
 		if err != nil {
 			return nil, err
 		}
 		cell.Value = res
-		cell.Dirty = false
+		spreadsheet.DirtySet.Remove(cell.Uuid)
 	}
 	return cell.Value, nil
 }
 
-func (ln LiteralNode) Eval(ctx *EvalContext) (interface{}, error) {
+func (ln *LiteralNode) Eval(ctx *EvalContext) (interface{}, error) {
 	return ln.Value, nil
 }
 
-func (rn ReferenceNode) Eval(ctx *EvalContext) (interface{}, error) {
+func (rn *ReferenceNode) Eval(ctx *EvalContext) (interface{}, error) {
 	var sheetRef *Sheet
 	if rn.Sheet != nil {
 		sheetRef = rn.Sheet
@@ -31,7 +35,7 @@ func (rn ReferenceNode) Eval(ctx *EvalContext) (interface{}, error) {
 	return sheetRef.Cells[rn.Row][rn.Col].GetValue()
 }
 
-func (fn FunctionNode) Eval(ctx *EvalContext) (interface{}, error) {
+func (fn *FunctionNode) Eval(ctx *EvalContext) (interface{}, error) {
 	args := make([]interface{}, len(fn.Args))
 	for i, arg := range fn.Args {
 		res, err := arg.Eval(ctx)

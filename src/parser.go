@@ -1,6 +1,7 @@
 package src
 
 import (
+	"fmt"
 	"github.com/alecthomas/participle/v2"
 	"github.com/alecthomas/participle/v2/lexer"
 	"strings"
@@ -44,6 +45,7 @@ func Parse(input string) (FormulaNode, error) {
 		{"Whitespace", `\s+`},
 	})
 
+	// TODO: I think this should not happen on every single parse.
 	parser, err := participle.Build[Formula](
 		participle.Lexer(langLexer),
 		participle.CaseInsensitive("Ident"),
@@ -97,5 +99,20 @@ func (call *FunctionCall) toAst() FormulaNode {
 	for i, arg := range call.Args {
 		newArgs[i] = arg.toAst()
 	}
-	return &FunctionNode{Name: strings.ToLower(*call.Name), Args: newArgs}
+	return &FunctionNode{Name: strings.ToUpper(*call.Name), Args: newArgs}
+}
+
+func astToString(node FormulaNode) string {
+	switch node := node.(type) {
+	// Cases: literal node string, literal node int, function node, reference node
+	case *LiteralNode:
+		// Check if it's an int
+		if _, ok := node.Value.(int); ok {
+			return fmt.Sprintf("%d", node.Value)
+		}
+		return fmt.Sprintf(`"%s"`, node.Value)
+	case *FunctionNode:
+		return fmt.Sprintf("%s(%s)", node.Name, strings.Join(Map(node.Args, astToString), ", "))
+	}
+	return ""
 }

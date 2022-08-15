@@ -4,9 +4,9 @@ import "fmt"
 
 func ExecuteFn(fnName string, args []interface{}) (interface{}, error) {
 	switch fnName {
-	case "concat":
+	case "CONCAT":
 		return Concat(args)
-	case "add":
+	case "ADD":
 		return Add(args)
 	default:
 		return nil, fmt.Errorf("execute: unknown function %s", fnName)

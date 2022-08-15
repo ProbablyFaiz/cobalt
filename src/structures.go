@@ -1,8 +1,19 @@
 package src
 
+import (
+	mapset "github.com/deckarep/golang-set/v2"
+	"sync"
+)
+
 type Spreadsheet struct {
-	Sheets map[string]*Sheet
+	Sheets     map[string]*Sheet
+	Mutex      sync.Mutex
+	CellMap    map[cellId]*Cell
+	DirtySet   mapset.Set[cellId]
+	Dependents map[cellId]mapset.Set[cellId]
 }
+
+type cellId string
 
 type Sheet struct {
 	Spreadsheet *Spreadsheet
@@ -10,13 +21,13 @@ type Sheet struct {
 }
 
 type Cell struct {
+	Value interface{}
+
+	Uuid  cellId
 	Sheet *Sheet
-	// Value can be a string, int, float, bool, or nil
-	Value      interface{}
-	Formula    FormulaNode
+
+	Formula    *FormulaNode
 	RawContent string
-	Dirty      bool
-	Dependents []*Cell
 }
 
 type FormulaNode interface {
