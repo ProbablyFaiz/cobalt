@@ -4,7 +4,7 @@ import "fmt"
 
 type FormulaNode interface {
 	Eval(ctx *EvalContext) (interface{}, error)
-	GetRefs() []ReferenceNode
+	GetRefs() []*ReferenceNode
 	ToFormula() string
 }
 
@@ -34,24 +34,24 @@ type EvalContext struct {
 
 // GetRefs implementations
 
-func (ln *LiteralNode) GetRefs() []ReferenceNode {
-	return make([]ReferenceNode, 0)
+func (ln *LiteralNode) GetRefs() []*ReferenceNode {
+	return make([]*ReferenceNode, 0)
 }
 
-func (rn *ReferenceNode) GetRefs() []ReferenceNode {
-	return []ReferenceNode{*rn}
+func (rn *ReferenceNode) GetRefs() []*ReferenceNode {
+	return []*ReferenceNode{rn}
 }
 
-func (fn *FunctionNode) GetRefs() []ReferenceNode {
-	var refs []ReferenceNode
+func (fn *FunctionNode) GetRefs() []*ReferenceNode {
+	refs := make([]*ReferenceNode, 0)
 	for _, arg := range fn.Args {
 		refs = append(refs, arg.GetRefs()...)
 	}
 	return refs
 }
 
-func (_ *NilNode) GetRefs() []ReferenceNode {
-	return make([]ReferenceNode, 0)
+func (_ *NilNode) GetRefs() []*ReferenceNode {
+	return make([]*ReferenceNode, 0)
 }
 
 // ToFormula implementations
@@ -61,12 +61,7 @@ func (ln *LiteralNode) ToFormula() string {
 }
 
 func (rn *ReferenceNode) ToFormula() string {
-	// Convert rn.Col to a letter or letters (e.g. 0 -> A, 1 -> B, 26 -> AA, etc.)
-	colLetters := ""
-	for i := rn.Col; i >= 0; i = i/26 - 1 {
-		colLetters = string(rune('A'+i%26)) + colLetters
-	}
-	return fmt.Sprintf("%s%d", colLetters, rn.Row+1)
+	return getA1Notation(rn.Row, rn.Col)
 }
 
 func (fn *FunctionNode) ToFormula() string {

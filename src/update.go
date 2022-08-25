@@ -36,7 +36,9 @@ func (ss *Spreadsheet) UpdateCell(sheetName string, row int, col int, content st
 
 	for currCellId := range ss.DirtySet.Iter() {
 		currCell := ss.CellMap[currCellId]
-		res, err := (*currCell.Formula).Eval(nil)
+		res, err := (*currCell.Formula).Eval(&EvalContext{
+			Cell: currCell,
+		})
 		if err != nil {
 			return err
 		}

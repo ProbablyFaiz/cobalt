@@ -15,6 +15,7 @@ type PFormula struct {
 type PArgument struct {
 	ValueLiteral *PArgLiteral   `@@`
 	FunctionCall *PFunctionCall `| @@`
+	Reference    *PReference    `| @@`
 }
 
 type PBareLiteral struct {
@@ -32,16 +33,25 @@ type PFunctionCall struct {
 	Args []*PArgument `LPar ( @@ Sep )* @@? RPar`
 }
 
+type PReference struct {
+	A1 *string `@A1Ref`
+}
+
 func Parse(input string) (FormulaNode, error) {
+	if input == "" {
+		return &NilNode{}, nil
+	}
+
 	langLexer := lexer.MustSimple([]lexer.SimpleRule{
 		{"Eq", `=`},
 		{"Sep", `,`},
 		{"LPar", `\(`},
 		{"RPar", `\)`},
+		{"A1Ref", `[A-Z]+[0-9]+`},
 		{"Ident", `[a-zA-Z_]\w*`},
 		{"Int", `[-+]?\d+`},
 		{"String", `"(\\"|[^"])*"`},
-		//{"BareString", `.*`},
+		//{"BareString", `^[^=].*`},
 		{"Whitespace", `\s+`},
 	})
 
@@ -80,7 +90,13 @@ func (argument *PArgument) toAst() FormulaNode {
 	if argument.FunctionCall != nil {
 		return argument.FunctionCall.toAst()
 	}
-	return argument.ValueLiteral.toAst()
+	if argument.Reference != nil {
+		return argument.Reference.toAst()
+	}
+	if argument.ValueLiteral != nil {
+		return argument.ValueLiteral.toAst()
+	}
+	panic("Impossible state in PArgument.toAst()")
 }
 
 func (literal *PBareLiteral) toAst() FormulaNode {
@@ -100,6 +116,16 @@ func (call *PFunctionCall) toAst() FormulaNode {
 		newArgs[i] = arg.toAst()
 	}
 	return &FunctionNode{Name: strings.ToUpper(*call.Name), Args: newArgs}
+}
+
+func (reference *PReference) toAst() FormulaNode {
+	row, col, err := parseA1Notation(*reference.A1)
+	if err != nil {
+		// Well, shit. TODO: Refactor all the toAst() methods to return an error,
+		// because this is a common failure mode.
+		panic(err)
+	}
+	return &ReferenceNode{Row: row, Col: col}
 }
 
 func astToString(node FormulaNode) string {
