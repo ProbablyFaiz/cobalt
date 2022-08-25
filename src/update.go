@@ -2,26 +2,45 @@ package src
 
 import (
 	"fmt"
-	mapset "github.com/deckarep/golang-set/v2"
+	"github.com/deckarep/golang-set/v2"
 	"github.com/google/uuid"
 )
 
 const DefaultNumCols = 26
 const DefaultNumRows = 1000
 
-func (ss *Spreadsheet) UpdateCell(sheetName string, row int, col int, content string) error {
+func (ss *Spreadsheet) UpdateCell(sheetName string, cellId cellId, content string) error {
 	ss.Mutex.Lock()
 
-	sheet := ss.Sheets[sheetName]
-	cell := sheet.Cells[row][col]
+	cell := ss.CellMap[cellId]
+
 	cell.RawContent = content
-	err := cell.Dirty(nil)
 
-	ss.Mutex.Unlock()
-
+	newFormula, err := Parse(content)
+	// TODO: Decorate all these errors with something useful.
 	if err != nil {
+		ss.Mutex.Unlock()
 		return err
 	}
+	cell.Formula = &newFormula
+
+	err = cell.Dirty(nil)
+	if err != nil {
+		ss.Mutex.Unlock()
+		return err
+	}
+
+	for cellId := range ss.DirtySet.Iter() {
+		currCell := ss.CellMap[cellId]
+		res, err := (*currCell.Formula).Eval(nil)
+		if err != nil {
+			ss.Mutex.Unlock()
+			return err
+		}
+		currCell.Value = res
+	}
+
+	ss.Mutex.Unlock()
 	return nil
 }
 
@@ -54,27 +73,57 @@ func (ss *Spreadsheet) AddSheet(sheetName string) error {
 	return nil
 }
 
+func (cell *Cell) UpdateDependencies() error {
+	// Remove existing parents, as well as those parents' corresponding children.
+	for parent := range cell.Sheet.Spreadsheet.Parents[cell.Uuid].Iter() {
+		cell.Sheet.Spreadsheet.Children[parent].Remove(cell.Uuid)
+	}
+	cell.Sheet.Spreadsheet.Parents[cell.Uuid].Clear()
+
+	ss := cell.Sheet.Spreadsheet
+	refs := (*cell.Formula).GetRefs()
+	for _, ref := range refs {
+		if ref.Sheet == nil {
+			ref.Sheet = cell.Sheet
+		}
+		// Resolve the reference.
+		parent := ref.Sheet.Cells[ref.Row][ref.Col]
+		ref.ResolvedUuid = parent.Uuid
+		// Check if ss.Parents[parent.Uuid] is nil and initialize it if so.
+		if ss.Parents[parent.Uuid] == nil {
+			ss.Parents[parent.Uuid] = mapset.NewThreadUnsafeSet[cellId]()
+		}
+		ss.Parents[parent.Uuid].Add(cell.Uuid)
+		// Check if ss.Children[cell.Uuid] is nil and initialize it if so.
+		if ss.Children[cell.Uuid] == nil {
+			ss.Children[cell.Uuid] = mapset.NewThreadUnsafeSet[cellId]()
+		}
+		ss.Children[cell.Uuid].Add(parent.Uuid)
+	}
+	return nil
+}
+
 func (cell *Cell) Dirty(visited mapset.Set[cellId]) error {
-	// If visited is nil, initialize it.
 	if visited == nil {
 		visited = mapset.NewThreadUnsafeSet[cellId]()
 	}
 
-	// If the cell is already visited, cycle error.
 	if visited.Contains(cell.Uuid) {
 		return fmt.Errorf("cycle detected")
 	}
-	visited.Add(cell.Uuid)
 
 	spreadsheet := cell.Sheet.Spreadsheet
 	spreadsheet.DirtySet.Add(cell.Uuid)
 	// Dirty all dependent cells.
-	for dependent := range spreadsheet.Dependents[cell.Uuid].Iter() {
-		err := spreadsheet.CellMap[dependent].Dirty(visited)
-		if err != nil {
-			return err
+	if spreadsheet.Children[cell.Uuid] != nil {
+		visited.Add(cell.Uuid)
+		for dependent := range spreadsheet.Children[cell.Uuid].Iter() {
+			err := spreadsheet.CellMap[dependent].Dirty(visited)
+			if err != nil {
+				return err
+			}
 		}
+		visited.Remove(cell.Uuid)
 	}
-	visited.Remove(cell.Uuid)
 	return nil
 }

@@ -1,16 +1,18 @@
 package src
 
 import (
-	mapset "github.com/deckarep/golang-set/v2"
+	"github.com/deckarep/golang-set/v2"
 	"sync"
 )
 
 type Spreadsheet struct {
-	Sheets     map[string]*Sheet
-	Mutex      sync.Mutex
-	CellMap    map[cellId]*Cell
-	DirtySet   mapset.Set[cellId]
-	Dependents map[cellId]mapset.Set[cellId]
+	Sheets   map[string]*Sheet
+	Mutex    sync.Mutex
+	CellMap  map[cellId]*Cell
+	DirtySet mapset.Set[cellId]
+	// Note that Children and Parents do not imply a nested structure, only dependencies.
+	Parents  map[cellId]mapset.Set[cellId]
+	Children map[cellId]mapset.Set[cellId]
 }
 
 type cellId string
@@ -30,26 +32,12 @@ type Cell struct {
 	RawContent string
 }
 
-type FormulaNode interface {
-	Eval(ctx *EvalContext) (interface{}, error)
-}
-
-type LiteralNode struct {
-	Value interface{}
-}
-
-type ReferenceNode struct {
-	Row   int
-	Col   int
-	Sheet *Sheet // If nil, then the cell is in the current sheet
-}
-
-type FunctionNode struct {
-	Name string
-	Args []FormulaNode
-}
-
-type EvalContext struct {
-	Cell *Cell
-	// TODO: Add more stuff here
+func NewSpreadsheet() *Spreadsheet {
+	return &Spreadsheet{
+		Sheets:   make(map[string]*Sheet),
+		CellMap:  make(map[cellId]*Cell),
+		DirtySet: mapset.NewThreadUnsafeSet[cellId](),
+		Parents:  make(map[cellId]mapset.Set[cellId]),
+		Children: make(map[cellId]mapset.Set[cellId]),
+	}
 }
