@@ -9,39 +9,57 @@ import (
 const DefaultNumCols = 26
 const DefaultNumRows = 1000
 
-func (ss *Spreadsheet) UpdateCell(sheetName string, cellId cellId, content string) error {
+func (ss *Spreadsheet) UpdateCell(sheetName string, row int, col int, content string) error {
 	ss.Mutex.Lock()
+	defer ss.Mutex.Unlock()
 
-	cell := ss.CellMap[cellId]
+	cell := &ss.Sheets[sheetName].Cells[row][col]
 
 	cell.RawContent = content
 
 	newFormula, err := Parse(content)
 	// TODO: Decorate all these errors with something useful.
 	if err != nil {
-		ss.Mutex.Unlock()
 		return err
 	}
 	cell.Formula = &newFormula
 
-	err = cell.Dirty(nil)
+	err = cell.UpdateDependencies()
 	if err != nil {
-		ss.Mutex.Unlock()
 		return err
 	}
 
-	for cellId := range ss.DirtySet.Iter() {
-		currCell := ss.CellMap[cellId]
+	err = cell.Dirty(nil)
+	if err != nil {
+		return err
+	}
+
+	for currCellId := range ss.DirtySet.Iter() {
+		currCell := ss.CellMap[currCellId]
 		res, err := (*currCell.Formula).Eval(nil)
 		if err != nil {
-			ss.Mutex.Unlock()
 			return err
 		}
 		currCell.Value = res
 	}
 
-	ss.Mutex.Unlock()
 	return nil
+}
+
+func (ss *Spreadsheet) GetCell(sheetName string, row int, col int) (*Cell, error) {
+	// Check if the sheet exists and if the cell is in bounds.
+	sheet, ok := ss.Sheets[sheetName]
+	if !ok {
+		return nil, fmt.Errorf("sheet %s does not exist", sheetName)
+	}
+	if row < 0 || row >= len(sheet.Cells) {
+		return nil, fmt.Errorf("row %d is out of bounds", row)
+	}
+	if col < 0 || col >= len(sheet.Cells[row]) {
+		return nil, fmt.Errorf("col %d is out of bounds", col)
+	}
+
+	return &sheet.Cells[row][col], nil
 }
 
 func (ss *Spreadsheet) AddSheet(sheetName string) error {
@@ -63,10 +81,14 @@ func (ss *Spreadsheet) AddSheet(sheetName string) error {
 	for i := 0; i < DefaultNumRows; i++ {
 		cells[i] = make([]Cell, DefaultNumCols)
 		for j := 0; j < DefaultNumCols; j++ {
+			var formula FormulaNode = &NilNode{}
 			cells[i][j] = Cell{
-				Uuid:  cellId(uuid.New().String()),
-				Sheet: newSheet,
+				Uuid:    cellId(uuid.New().String()),
+				Sheet:   newSheet,
+				Formula: &formula,
+				Value:   nil,
 			}
+			ss.CellMap[cells[i][j].Uuid] = &cells[i][j]
 		}
 	}
 	ss.Mutex.Unlock()
@@ -74,13 +96,22 @@ func (ss *Spreadsheet) AddSheet(sheetName string) error {
 }
 
 func (cell *Cell) UpdateDependencies() error {
-	// Remove existing parents, as well as those parents' corresponding children.
-	for parent := range cell.Sheet.Spreadsheet.Parents[cell.Uuid].Iter() {
-		cell.Sheet.Spreadsheet.Children[parent].Remove(cell.Uuid)
-	}
-	cell.Sheet.Spreadsheet.Parents[cell.Uuid].Clear()
-
 	ss := cell.Sheet.Spreadsheet
+
+	// Check if ss.Children[cell.Uuid] and ss.Parents[cell.Uuid] are nil and if so, initialize them.
+	if ss.Children[cell.Uuid] == nil {
+		ss.Children[cell.Uuid] = mapset.NewThreadUnsafeSet[cellId]()
+	}
+	if ss.Parents[cell.Uuid] == nil {
+		ss.Parents[cell.Uuid] = mapset.NewThreadUnsafeSet[cellId]()
+	}
+
+	// Remove existing parents, as well as those parents' corresponding children.
+	for parent := range ss.Parents[cell.Uuid].Iter() {
+		ss.Children[parent].Remove(cell.Uuid)
+	}
+	ss.Parents[cell.Uuid].Clear()
+
 	refs := (*cell.Formula).GetRefs()
 	for _, ref := range refs {
 		if ref.Sheet == nil {
@@ -94,10 +125,6 @@ func (cell *Cell) UpdateDependencies() error {
 			ss.Parents[parent.Uuid] = mapset.NewThreadUnsafeSet[cellId]()
 		}
 		ss.Parents[parent.Uuid].Add(cell.Uuid)
-		// Check if ss.Children[cell.Uuid] is nil and initialize it if so.
-		if ss.Children[cell.Uuid] == nil {
-			ss.Children[cell.Uuid] = mapset.NewThreadUnsafeSet[cellId]()
-		}
 		ss.Children[cell.Uuid].Add(parent.Uuid)
 	}
 	return nil

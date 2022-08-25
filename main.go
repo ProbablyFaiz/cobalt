@@ -1,14 +1,28 @@
 package main
 
-import . "pasado/src"
+import (
+	"fmt"
+	. "pasado/src"
+)
 
 func main() {
 	// Initialize the spreadsheet.
-	ss := Spreadsheet{
-		Sheets: make(map[string]*Sheet),
+	ss := NewSpreadsheet()
+
+	// Add a formula to a cell.
+	err := ss.UpdateCell("Sheet1", 0, 0, `=CONCAT("Hello, ", "world!")`)
+	if err != nil {
+		panic(err)
 	}
-	// Add a sheet.
-	ss.AddSheet("Sheet1")
-	// UpdateCell a cell.
-	ss.UpdateCell("Sheet1", 0, 0, "Hello, world!")
+
+	// Get the value of the cell and print it.
+	cell, err := ss.GetCell("Sheet1", 0, 0)
+	if err != nil {
+		panic(err)
+	}
+	value, err := cell.GetValue()
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println(value)
 }

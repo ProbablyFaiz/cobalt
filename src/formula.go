@@ -24,6 +24,9 @@ type FunctionNode struct {
 	Args []FormulaNode
 }
 
+type NilNode struct {
+}
+
 type EvalContext struct {
 	Cell *Cell
 	// TODO: Add more stuff here
@@ -32,7 +35,7 @@ type EvalContext struct {
 // GetRefs implementations
 
 func (ln *LiteralNode) GetRefs() []ReferenceNode {
-	return nil
+	return make([]ReferenceNode, 0)
 }
 
 func (rn *ReferenceNode) GetRefs() []ReferenceNode {
@@ -45,6 +48,10 @@ func (fn *FunctionNode) GetRefs() []ReferenceNode {
 		refs = append(refs, arg.GetRefs()...)
 	}
 	return refs
+}
+
+func (_ *NilNode) GetRefs() []ReferenceNode {
+	return make([]ReferenceNode, 0)
 }
 
 // ToFormula implementations
@@ -72,6 +79,10 @@ func (fn *FunctionNode) ToFormula() string {
 	}
 	formula += ")"
 	return formula
+}
+
+func (_ *NilNode) ToFormula() string {
+	return ""
 }
 
 // Eval implementations in src/eval.go

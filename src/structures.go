@@ -33,11 +33,17 @@ type Cell struct {
 }
 
 func NewSpreadsheet() *Spreadsheet {
-	return &Spreadsheet{
+	ss := &Spreadsheet{
 		Sheets:   make(map[string]*Sheet),
 		CellMap:  make(map[cellId]*Cell),
 		DirtySet: mapset.NewThreadUnsafeSet[cellId](),
 		Parents:  make(map[cellId]mapset.Set[cellId]),
 		Children: make(map[cellId]mapset.Set[cellId]),
 	}
+	// Add the default sheet.
+	err := ss.AddSheet("Sheet1")
+	if err != nil {
+		return nil
+	}
+	return ss
 }

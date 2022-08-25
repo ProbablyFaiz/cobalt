@@ -1,22 +1,14 @@
 package src
 
 func (cell *Cell) GetValue() (interface{}, error) {
-	spreadsheet := cell.Sheet.Spreadsheet
-	if spreadsheet.DirtySet.Contains(cell.Uuid) {
-		formula, err := Parse(cell.RawContent)
-		if err != nil {
-			return nil, err
-		}
-		cell.Formula = &formula
-		if err != nil {
-			return nil, err
-		}
+	ss := cell.Sheet.Spreadsheet
+	if ss.DirtySet.Contains(cell.Uuid) {
 		res, err := (*cell.Formula).Eval(&EvalContext{Cell: cell})
 		if err != nil {
 			return nil, err
 		}
 		cell.Value = res
-		spreadsheet.DirtySet.Remove(cell.Uuid)
+		ss.DirtySet.Remove(cell.Uuid)
 	}
 	return cell.Value, nil
 }
@@ -26,13 +18,7 @@ func (ln *LiteralNode) Eval(ctx *EvalContext) (interface{}, error) {
 }
 
 func (rn *ReferenceNode) Eval(ctx *EvalContext) (interface{}, error) {
-	var sheetRef *Sheet
-	if rn.Sheet != nil {
-		sheetRef = rn.Sheet
-	} else {
-		sheetRef = ctx.Cell.Sheet
-	}
-	return sheetRef.Cells[rn.Row][rn.Col].GetValue()
+	return ctx.Cell.Sheet.Spreadsheet.CellMap[rn.ResolvedUuid].GetValue()
 }
 
 func (fn *FunctionNode) Eval(ctx *EvalContext) (interface{}, error) {
@@ -45,4 +31,8 @@ func (fn *FunctionNode) Eval(ctx *EvalContext) (interface{}, error) {
 		args[i] = res
 	}
 	return ExecuteFn(fn.Name, args)
+}
+
+func (_ *NilNode) Eval(ctx *EvalContext) (interface{}, error) {
+	return nil, nil
 }
