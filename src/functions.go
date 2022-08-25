@@ -8,6 +8,8 @@ func ExecuteFn(fnName string, args []interface{}) (interface{}, error) {
 		return Concat(args)
 	case "ADD":
 		return Add(args)
+	case "+":
+		return Add(args)
 	default:
 		return nil, fmt.Errorf("execute: unknown function %s", fnName)
 	}

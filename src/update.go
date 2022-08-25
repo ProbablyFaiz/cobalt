@@ -9,11 +9,14 @@ import (
 const DefaultNumCols = 26
 const DefaultNumRows = 1000
 
-func (ss *Spreadsheet) UpdateCell(sheetName string, row int, col int, content string) error {
+func (ss *Spreadsheet) UpdateCell(cellUuid cellId, content string) error {
+	// TODO: This should be structured as a synchronous add to a queue, and a separate goroutine should
+	//  handle the updates.
+
 	ss.Mutex.Lock()
 	defer ss.Mutex.Unlock()
 
-	cell := &ss.Sheets[sheetName].Cells[row][col]
+	cell := ss.CellMap[cellUuid]
 
 	cell.RawContent = content
 

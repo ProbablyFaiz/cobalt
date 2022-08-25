@@ -27,4 +27,26 @@ func TestParse(t *testing.T) {
 	assert.Equal(t, p7.(*FunctionNode).Args[0].(*ReferenceNode).Col, 0)
 	assert.Equal(t, p7.(*FunctionNode).Args[1].(*ReferenceNode).Row, 44)
 	assert.Equal(t, p7.(*FunctionNode).Args[1].(*ReferenceNode).Col, 26)
+	// Infix notation.
+	p8, _ := Parse(`=1 + 2`)
+	assert.Equal(t, p8.(*FunctionNode).Name, "+")
+	assert.Equal(t, len(p8.(*FunctionNode).Args), 2)
+	assert.Equal(t, p8.(*FunctionNode).Args[0].(*LiteralNode).Value.(int), 1)
+	assert.Equal(t, p8.(*FunctionNode).Args[1].(*LiteralNode).Value.(int), 2)
+	// Infix with parens.
+	p9, _ := Parse(`=(1 + 2) * 3`)
+	assert.Equal(t, p9.(*FunctionNode).Name, "*")
+	assert.Equal(t, len(p9.(*FunctionNode).Args), 2)
+	assert.Equal(t, p9.(*FunctionNode).Args[0].(*FunctionNode).Name, "+")
+	assert.Equal(t, p9.(*FunctionNode).Args[1].(*LiteralNode).Value.(int), 3)
+	assert.Equal(t, p9.(*FunctionNode).Args[0].(*FunctionNode).Args[0].(*LiteralNode).Value.(int), 1)
+	assert.Equal(t, p9.(*FunctionNode).Args[0].(*FunctionNode).Args[1].(*LiteralNode).Value.(int), 2)
+
+	// Inside a function.
+	p10, _ := Parse(`=Add(1 + 2)`)
+	assert.Equal(t, p10.(*FunctionNode).Name, "ADD")
+	assert.Equal(t, len(p10.(*FunctionNode).Args), 1)
+	assert.Equal(t, p10.(*FunctionNode).Args[0].(*FunctionNode).Name, "+")
+	assert.Equal(t, p10.(*FunctionNode).Args[0].(*FunctionNode).Args[0].(*LiteralNode).Value.(int), 1)
+	assert.Equal(t, p10.(*FunctionNode).Args[0].(*FunctionNode).Args[1].(*LiteralNode).Value.(int), 2)
 }

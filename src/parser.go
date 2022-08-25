@@ -8,14 +8,25 @@ import (
 )
 
 type PFormula struct {
-	Argument     *PArgument    `Eq @@`
-	ValueLiteral *PBareLiteral `| @@`
+	Argument     *PArgumentWithInfix `Eq @@`
+	ValueLiteral *PBareLiteral       `| @@`
+}
+
+type PArgumentWithInfix struct {
+	Left       *PArgument   `@@`
+	InfixRight *PInfixRight `@@?`
+}
+
+type PInfixRight struct {
+	Op    *string             `@InfixOp`
+	Right *PArgumentWithInfix `@@`
 }
 
 type PArgument struct {
-	ValueLiteral *PArgLiteral   `@@`
-	FunctionCall *PFunctionCall `| @@`
-	Reference    *PReference    `| @@`
+	ValueLiteral    *PArgLiteral        `@@`
+	FunctionCall    *PFunctionCall      `| @@`
+	Reference       *PReference         `| @@`
+	WrappedArgument *PArgumentWithInfix `| LPar @@ RPar`
 }
 
 type PBareLiteral struct {
@@ -29,48 +40,56 @@ type PArgLiteral struct {
 }
 
 type PFunctionCall struct {
-	Name *string      `@Ident`
-	Args []*PArgument `LPar ( @@ Sep )* @@? RPar`
+	Name *string               `@Ident`
+	Args []*PArgumentWithInfix `LPar @@? ( Sep @@ )* RPar`
 }
 
 type PReference struct {
 	A1 *string `@A1Ref`
 }
 
+var langLexer = lexer.MustSimple([]lexer.SimpleRule{
+	{"Eq", `=`},
+	{"Sep", `,`},
+	{"LPar", `\(`},
+	{"RPar", `\)`},
+	{"A1Ref", `[A-Z]+[0-9]+`},
+	{"Ident", `[a-zA-Z_]\w*`},
+	{"Int", `[-+]?\d+`},
+	{"InfixOp", `[-+*/]`},
+	{"String", `"(\\"|[^"])*"`},
+	//{"BareString", `^[^=].*`},
+	{"Whitespace", `\s+`},
+})
+
+var parser, parseBuildError = participle.Build[PFormula](
+	participle.Lexer(langLexer),
+	participle.CaseInsensitive("Ident"),
+	participle.Elide("Whitespace"),
+	participle.Unquote("String"))
+
 func Parse(input string) (FormulaNode, error) {
+	if parseBuildError != nil {
+		panic(parseBuildError)
+	}
+
 	if input == "" {
 		return &NilNode{}, nil
 	}
 
-	langLexer := lexer.MustSimple([]lexer.SimpleRule{
-		{"Eq", `=`},
-		{"Sep", `,`},
-		{"LPar", `\(`},
-		{"RPar", `\)`},
-		{"A1Ref", `[A-Z]+[0-9]+`},
-		{"Ident", `[a-zA-Z_]\w*`},
-		{"Int", `[-+]?\d+`},
-		{"String", `"(\\"|[^"])*"`},
-		//{"BareString", `^[^=].*`},
-		{"Whitespace", `\s+`},
-	})
-
-	// TODO: I think this should not happen on every single parse.
-	parser, err := participle.Build[PFormula](
-		participle.Lexer(langLexer),
-		participle.CaseInsensitive("Ident"),
-		participle.Elide("Whitespace"),
-		participle.Unquote("String"))
-	if err != nil {
-		return nil, err
-	}
 	//fmt.Printf("%#v\n", langLexer.Symbols())
+	//// Create a map where keys are the symbols and values are the names of the symbols
+	//symbolNames := make(map[lexer.TokenType]string)
+	//for name, symbol := range langLexer.Symbols() {
+	//	symbolNames[symbol] = name
+	//}
+	//
 	//tokens, err := parser.Lex("", strings.NewReader(input))
 	//if err != nil {
 	//	panic(err)
 	//}
 	//for _, token := range tokens {
-	//	fmt.Printf("%#v\n", token.Type)
+	//	fmt.Printf("%#v\n", symbolNames[token.Type])
 	//}
 	formula, err := parser.Parse("", strings.NewReader(input))
 	if err != nil {
@@ -83,7 +102,10 @@ func (formula *PFormula) toAst() FormulaNode {
 	if formula.Argument != nil {
 		return formula.Argument.toAst()
 	}
-	return formula.ValueLiteral.toAst()
+	if formula.ValueLiteral != nil {
+		return formula.ValueLiteral.toAst()
+	}
+	panic("Impossible state in PFormula.toAst()")
 }
 
 func (argument *PArgument) toAst() FormulaNode {
@@ -95,6 +117,9 @@ func (argument *PArgument) toAst() FormulaNode {
 	}
 	if argument.ValueLiteral != nil {
 		return argument.ValueLiteral.toAst()
+	}
+	if argument.WrappedArgument != nil {
+		return argument.WrappedArgument.toAst()
 	}
 	panic("Impossible state in PArgument.toAst()")
 }
@@ -116,6 +141,13 @@ func (call *PFunctionCall) toAst() FormulaNode {
 		newArgs[i] = arg.toAst()
 	}
 	return &FunctionNode{Name: strings.ToUpper(*call.Name), Args: newArgs}
+}
+
+func (call *PArgumentWithInfix) toAst() FormulaNode {
+	if call.InfixRight == nil {
+		return call.Left.toAst()
+	}
+	return &FunctionNode{Name: *call.InfixRight.Op, Args: []FormulaNode{call.Left.toAst(), call.InfixRight.Right.toAst()}}
 }
 
 func (reference *PReference) toAst() FormulaNode {

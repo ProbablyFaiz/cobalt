@@ -9,11 +9,14 @@ func main() {
 	ss := NewSpreadsheet()
 
 	// Add a formula to a cell.
-	_ = ss.UpdateCell("Sheet1", 0, 0, `="Hello, "`)
-	_ = ss.UpdateCell("Sheet1", 0, 1, `="World!"`)
-	_ = ss.UpdateCell("Sheet1", 0, 2, `=CONCAT(A1, B1)`)
+	cell00, _ := ss.GetCell("Sheet1", 0, 0)
+	_ = ss.UpdateCell(cell00.Uuid, `3`)
+	cell01, _ := ss.GetCell("Sheet1", 0, 1)
+	_ = ss.UpdateCell(cell01.Uuid, `9`)
+	cell02, _ := ss.GetCell("Sheet1", 0, 2)
+	_ = ss.UpdateCell(cell02.Uuid, `=Add(A1, B1)`)
 
 	// Print the value of the cell.
 	cell, _ := ss.GetCell("Sheet1", 0, 2)
-	println(cell.Value.(string))
+	println(cell.Value.(int))
 }
