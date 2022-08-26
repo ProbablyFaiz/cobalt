@@ -1,5 +1,10 @@
 package src
 
+import (
+	"fmt"
+	"pasado/src/functions"
+)
+
 func (cell *Cell) GetValue() (interface{}, error) {
 	ss := cell.Sheet.Spreadsheet
 	if ss.DirtySet.Contains(cell.Uuid) {
@@ -35,4 +40,37 @@ func (fn *FunctionNode) Eval(ctx *EvalContext) (interface{}, error) {
 
 func (_ *NilNode) Eval(ctx *EvalContext) (interface{}, error) {
 	return nil, nil
+}
+
+func ExecuteFn(fnName string, args []interface{}) (interface{}, error) {
+	switch fnName {
+	case "CONCAT":
+		return functions.Concat(args)
+	case "ADD":
+		return functions.Add(args)
+	case "+":
+		return functions.Add(args)
+	case "SUB":
+		return functions.Sub(args)
+	case "-":
+		return functions.Sub(args)
+	case "MUL":
+		return functions.Mul(args)
+	case "*":
+		return functions.Mul(args)
+	case "DIV":
+		return functions.Div(args)
+	case "/":
+		return functions.Div(args)
+	case "MOD":
+		return functions.Mod(args)
+	case "%":
+		return functions.Mod(args)
+	case "POW":
+		return functions.Pow(args)
+	case "IF":
+		return functions.If(args)
+	default:
+		return nil, fmt.Errorf("execute: unknown function %s", fnName)
+	}
 }
