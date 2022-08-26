@@ -3,9 +3,9 @@ package src
 import "fmt"
 
 type FormulaNode interface {
-	Eval(ctx *EvalContext) (interface{}, error)
-	GetRefs() []*ReferenceNode
-	ToFormula() string
+	eval(ctx *EvalContext) (interface{}, error)
+	getRefs() []*ReferenceNode
+	toFormula() string
 }
 
 type LiteralNode struct {
@@ -42,52 +42,52 @@ type EvalContext struct {
 	// TODO: Add more stuff here
 }
 
-// GetRefs implementations
+// getRefs implementations
 
-func (ln *LiteralNode) GetRefs() []*ReferenceNode {
+func (ln *LiteralNode) getRefs() []*ReferenceNode {
 	return make([]*ReferenceNode, 0)
 }
 
-func (rn *ReferenceNode) GetRefs() []*ReferenceNode {
+func (rn *ReferenceNode) getRefs() []*ReferenceNode {
 	return []*ReferenceNode{rn}
 }
 
-func (rn *RangeNode) GetRefs() []*ReferenceNode {
+func (rn *RangeNode) getRefs() []*ReferenceNode {
 	// TODO: We probably want to set up global range tracking with segment
 	//  trees, so we can efficiently dirty ranges etc.
 	panic("not implemented")
 }
 
-func (fn *FunctionNode) GetRefs() []*ReferenceNode {
+func (fn *FunctionNode) getRefs() []*ReferenceNode {
 	refs := make([]*ReferenceNode, 0)
 	for _, arg := range fn.Args {
-		refs = append(refs, arg.GetRefs()...)
+		refs = append(refs, arg.getRefs()...)
 	}
 	return refs
 }
 
-func (_ *NilNode) GetRefs() []*ReferenceNode {
+func (_ *NilNode) getRefs() []*ReferenceNode {
 	return make([]*ReferenceNode, 0)
 }
 
-// ToFormula implementations
+// toFormula implementations
 
-func (ln *LiteralNode) ToFormula() string {
+func (ln *LiteralNode) toFormula() string {
 	return fmt.Sprintf("%v", ln.Value)
 }
 
-func (rn *ReferenceNode) ToFormula() string {
+func (rn *ReferenceNode) toFormula() string {
 	return getA1Notation(rn.Row, rn.Col)
 }
 
-func (rn *RangeNode) ToFormula() string {
-	return fmt.Sprintf("%s:%s", rn.From.ToFormula(), rn.To.ToFormula())
+func (rn *RangeNode) toFormula() string {
+	return fmt.Sprintf("%s:%s", rn.From.toFormula(), rn.To.toFormula())
 }
 
-func (fn *FunctionNode) ToFormula() string {
+func (fn *FunctionNode) toFormula() string {
 	formula := fn.Name + "("
 	for i, arg := range fn.Args {
-		formula += arg.ToFormula()
+		formula += arg.toFormula()
 		if i != len(fn.Args)-1 {
 			formula += ", "
 		}
@@ -96,8 +96,8 @@ func (fn *FunctionNode) ToFormula() string {
 	return formula
 }
 
-func (_ *NilNode) ToFormula() string {
+func (_ *NilNode) toFormula() string {
 	return ""
 }
 
-// Eval implementations in src/eval.go
+// eval implementations in src/eval.go

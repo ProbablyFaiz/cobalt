@@ -8,22 +8,22 @@ import (
 func (cell *Cell) GetOrComputeValue() (interface{}, error) {
 	ss := cell.Sheet.Spreadsheet
 	if ss.DirtySet.Contains(cell.Uuid) {
-		res, err := (*cell.Formula).Eval(&EvalContext{Cell: cell})
+		res, err := (*cell.Formula).eval(&EvalContext{Cell: cell})
 		cell.Value, cell.Error = res, err
 		ss.DirtySet.Remove(cell.Uuid)
 	}
 	return cell.Value, nil
 }
 
-func (ln *LiteralNode) Eval(ctx *EvalContext) (interface{}, error) {
+func (ln *LiteralNode) eval(ctx *EvalContext) (interface{}, error) {
 	return ln.Value, nil
 }
 
-func (rn *ReferenceNode) Eval(ctx *EvalContext) (interface{}, error) {
+func (rn *ReferenceNode) eval(ctx *EvalContext) (interface{}, error) {
 	return ctx.Cell.Sheet.Spreadsheet.CellMap[rn.ResolvedUuid].GetOrComputeValue()
 }
 
-func (rn *RangeNode) Eval(ctx *EvalContext) (interface{}, error) {
+func (rn *RangeNode) eval(ctx *EvalContext) (interface{}, error) {
 	// Gets the range of cells in the sheet
 	sheet := rn.To.Sheet
 	startRow, startCol := rn.From.Row, rn.From.Col
@@ -32,10 +32,10 @@ func (rn *RangeNode) Eval(ctx *EvalContext) (interface{}, error) {
 	return sheet.GetRange(startRow, startCol, endRow, endCol)
 }
 
-func (fn *FunctionNode) Eval(ctx *EvalContext) (interface{}, error) {
+func (fn *FunctionNode) eval(ctx *EvalContext) (interface{}, error) {
 	args := make([]interface{}, len(fn.Args))
 	for i, arg := range fn.Args {
-		res, err := arg.Eval(ctx)
+		res, err := arg.eval(ctx)
 		if err != nil {
 			return nil, err
 		}
@@ -44,7 +44,7 @@ func (fn *FunctionNode) Eval(ctx *EvalContext) (interface{}, error) {
 	return ExecuteFn(fn.Name, args)
 }
 
-func (_ *NilNode) Eval(ctx *EvalContext) (interface{}, error) {
+func (_ *NilNode) eval(ctx *EvalContext) (interface{}, error) {
 	return nil, nil
 }
 

@@ -28,9 +28,9 @@ func (ss *Spreadsheet) UpdateCell(cellUuid ReferenceId, content string) {
 	}
 
 	cell.Formula = &newFormula
-	cell.UpdateDependencies()
+	cell.updateDependencies()
 
-	err = cell.Dirty(nil)
+	err = cell.dirty(nil)
 	if err != nil {
 		cell.Value, cell.Error = nil, err
 		return
@@ -38,7 +38,7 @@ func (ss *Spreadsheet) UpdateCell(cellUuid ReferenceId, content string) {
 
 	for currCellId := range ss.DirtySet.Iter() {
 		currCell := ss.CellMap[currCellId]
-		res, err := (*currCell.Formula).Eval(&EvalContext{
+		res, err := (*currCell.Formula).eval(&EvalContext{
 			Cell: currCell,
 		})
 		currCell.Value, currCell.Error = res, err
@@ -48,6 +48,7 @@ func (ss *Spreadsheet) UpdateCell(cellUuid ReferenceId, content string) {
 
 func (ss *Spreadsheet) AddSheet(sheetName string) error {
 	ss.Mutex.Lock()
+	defer ss.Mutex.Unlock()
 
 	// Check if the sheet already exists.
 	if _, ok := ss.Sheets[sheetName]; ok {
@@ -76,11 +77,10 @@ func (ss *Spreadsheet) AddSheet(sheetName string) error {
 			ss.CellMap[cells[i][j].Uuid] = &cells[i][j]
 		}
 	}
-	ss.Mutex.Unlock()
 	return nil
 }
 
-func (cell *Cell) UpdateDependencies() {
+func (cell *Cell) updateDependencies() {
 	ss := cell.Sheet.Spreadsheet
 	// Check if ss.Children[cell.Uuid] and ss.Parents[cell.Uuid] are nil and if so, initialize them.
 	if ss.Children[cell.Uuid] == nil {
@@ -96,7 +96,7 @@ func (cell *Cell) UpdateDependencies() {
 	}
 	ss.Parents[cell.Uuid].Clear()
 
-	refs := (*cell.Formula).GetRefs()
+	refs := (*cell.Formula).getRefs()
 	for _, ref := range refs {
 		if ref.Sheet == nil {
 			ref.Sheet = cell.Sheet
@@ -113,7 +113,7 @@ func (cell *Cell) UpdateDependencies() {
 	}
 }
 
-func (cell *Cell) Dirty(visited mapset.Set[ReferenceId]) error {
+func (cell *Cell) dirty(visited mapset.Set[ReferenceId]) error {
 	if visited == nil {
 		visited = mapset.NewThreadUnsafeSet[ReferenceId]()
 	}
@@ -128,7 +128,7 @@ func (cell *Cell) Dirty(visited mapset.Set[ReferenceId]) error {
 	if spreadsheet.Children[cell.Uuid] != nil {
 		visited.Add(cell.Uuid)
 		for dependent := range spreadsheet.Children[cell.Uuid].Iter() {
-			err := spreadsheet.CellMap[dependent].Dirty(visited)
+			err := spreadsheet.CellMap[dependent].dirty(visited)
 			if err != nil {
 				return err
 			}
