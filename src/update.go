@@ -9,7 +9,7 @@ import (
 const DefaultNumCols = 26
 const DefaultNumRows = 1000
 
-func (ss *Spreadsheet) UpdateCell(cellUuid cellId, content string) error {
+func (ss *Spreadsheet) UpdateCell(cellUuid cellId, content string) {
 	// TODO: This should be structured as a synchronous add to a queue, and a separate goroutine should
 	//  handle the updates.
 
@@ -21,20 +21,18 @@ func (ss *Spreadsheet) UpdateCell(cellUuid cellId, content string) error {
 	cell.RawContent = content
 
 	newFormula, err := Parse(content)
-	// TODO: Decorate all these errors with something useful.
 	if err != nil {
-		return err
+		cell.Formula, cell.Value, cell.Error = nil, nil, err
+		return
 	}
-	cell.Formula = &newFormula
 
-	err = cell.UpdateDependencies()
-	if err != nil {
-		return err
-	}
+	cell.Formula = &newFormula
+	cell.UpdateDependencies()
 
 	err = cell.Dirty(nil)
 	if err != nil {
-		return err
+		cell.Value, cell.Error = nil, err
+		return
 	}
 
 	for currCellId := range ss.DirtySet.Iter() {
@@ -42,13 +40,9 @@ func (ss *Spreadsheet) UpdateCell(cellUuid cellId, content string) error {
 		res, err := (*currCell.Formula).Eval(&EvalContext{
 			Cell: currCell,
 		})
-		if err != nil {
-			return err
-		}
+		currCell.Value, currCell.Error = res, err
 		currCell.Value = res
 	}
-
-	return nil
 }
 
 func (ss *Spreadsheet) GetCell(sheetName string, row int, col int) (*Cell, error) {
@@ -100,9 +94,8 @@ func (ss *Spreadsheet) AddSheet(sheetName string) error {
 	return nil
 }
 
-func (cell *Cell) UpdateDependencies() error {
+func (cell *Cell) UpdateDependencies() {
 	ss := cell.Sheet.Spreadsheet
-
 	// Check if ss.Children[cell.Uuid] and ss.Parents[cell.Uuid] are nil and if so, initialize them.
 	if ss.Children[cell.Uuid] == nil {
 		ss.Children[cell.Uuid] = mapset.NewThreadUnsafeSet[cellId]()
@@ -132,7 +125,6 @@ func (cell *Cell) UpdateDependencies() error {
 		ss.Parents[parent.Uuid].Add(cell.Uuid)
 		ss.Children[cell.Uuid].Add(parent.Uuid)
 	}
-	return nil
 }
 
 func (cell *Cell) Dirty(visited mapset.Set[cellId]) error {

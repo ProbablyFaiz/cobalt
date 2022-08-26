@@ -9,10 +9,7 @@ func (cell *Cell) GetValue() (interface{}, error) {
 	ss := cell.Sheet.Spreadsheet
 	if ss.DirtySet.Contains(cell.Uuid) {
 		res, err := (*cell.Formula).Eval(&EvalContext{Cell: cell})
-		if err != nil {
-			return nil, err
-		}
-		cell.Value = res
+		cell.Value, cell.Error = res, err
 		ss.DirtySet.Remove(cell.Uuid)
 	}
 	return cell.Value, nil

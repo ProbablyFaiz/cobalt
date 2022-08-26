@@ -24,6 +24,7 @@ type Sheet struct {
 
 type Cell struct {
 	Value interface{}
+	Error error
 
 	Uuid  cellId
 	Sheet *Sheet

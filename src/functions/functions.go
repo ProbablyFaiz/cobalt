@@ -2,6 +2,9 @@ package functions
 
 import "fmt"
 
+// TODO: It may make sense to implement a basic type-checker so that
+//  we don't have to validate the types of arguments in every function.
+
 func Concat(args []interface{}) (string, error) {
 	var result string
 	for i, arg := range args {
@@ -54,7 +57,7 @@ func Sub(args []interface{}) (int, error) {
 }
 
 func Mul(args []interface{}) (int, error) {
-	var result int
+	var result int = 1
 	for i, arg := range args {
 		switch arg.(type) {
 		case int:
@@ -76,7 +79,11 @@ func Div(args []interface{}) (int, error) {
 	for i, arg := range args {
 		switch arg.(type) {
 		case int:
-			result /= arg.(int)
+			if i == 0 {
+				result = arg.(int)
+			} else {
+				result /= arg.(int)
+			}
 		default:
 			return 0, fmt.Errorf("div: argument %d is a %T, not an int", i, arg)
 		}
@@ -93,7 +100,11 @@ func Mod(args []interface{}) (int, error) {
 	for i, arg := range args {
 		switch arg.(type) {
 		case int:
-			result %= arg.(int)
+			if i == 0 {
+				result = arg.(int)
+			} else {
+				result %= arg.(int)
+			}
 		default:
 			return 0, fmt.Errorf("mod: argument %d is a %T, not an int", i, arg)
 		}
