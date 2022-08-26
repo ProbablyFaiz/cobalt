@@ -12,11 +12,21 @@ type LiteralNode struct {
 	Value interface{}
 }
 
+type Referencer interface {
+	Covers(r *ReferenceNode) bool
+}
+
 type ReferenceNode struct {
 	Row          int
 	Col          int
-	Sheet        *Sheet // If nil, then the cell is in the current sheet
-	ResolvedUuid cellId // If nil, then the cell has not been resolved yet
+	Sheet        *Sheet      // If nil, then the cell is in the current sheet
+	ResolvedUuid ReferenceId // If nil, then the cell has not been resolved yet
+}
+
+type RangeNode struct {
+	From         *ReferenceNode
+	To           *ReferenceNode
+	ResolvedUuid ReferenceId // If nil, then the range has not been resolved yet
 }
 
 type FunctionNode struct {
@@ -42,6 +52,12 @@ func (rn *ReferenceNode) GetRefs() []*ReferenceNode {
 	return []*ReferenceNode{rn}
 }
 
+func (rn *RangeNode) GetRefs() []*ReferenceNode {
+	// TODO: We probably want to set up global range tracking with segment
+	//  trees, so we can efficiently dirty ranges etc.
+	panic("not implemented")
+}
+
 func (fn *FunctionNode) GetRefs() []*ReferenceNode {
 	refs := make([]*ReferenceNode, 0)
 	for _, arg := range fn.Args {
@@ -62,6 +78,10 @@ func (ln *LiteralNode) ToFormula() string {
 
 func (rn *ReferenceNode) ToFormula() string {
 	return getA1Notation(rn.Row, rn.Col)
+}
+
+func (rn *RangeNode) ToFormula() string {
+	return fmt.Sprintf("%s:%s", rn.From.ToFormula(), rn.To.ToFormula())
 }
 
 func (fn *FunctionNode) ToFormula() string {

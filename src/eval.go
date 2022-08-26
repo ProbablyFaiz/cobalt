@@ -5,7 +5,7 @@ import (
 	"pasado/src/functions"
 )
 
-func (cell *Cell) GetValue() (interface{}, error) {
+func (cell *Cell) GetOrComputeValue() (interface{}, error) {
 	ss := cell.Sheet.Spreadsheet
 	if ss.DirtySet.Contains(cell.Uuid) {
 		res, err := (*cell.Formula).Eval(&EvalContext{Cell: cell})
@@ -20,7 +20,16 @@ func (ln *LiteralNode) Eval(ctx *EvalContext) (interface{}, error) {
 }
 
 func (rn *ReferenceNode) Eval(ctx *EvalContext) (interface{}, error) {
-	return ctx.Cell.Sheet.Spreadsheet.CellMap[rn.ResolvedUuid].GetValue()
+	return ctx.Cell.Sheet.Spreadsheet.CellMap[rn.ResolvedUuid].GetOrComputeValue()
+}
+
+func (rn *RangeNode) Eval(ctx *EvalContext) (interface{}, error) {
+	// Gets the range of cells in the sheet
+	sheet := rn.To.Sheet
+	startRow, startCol := rn.From.Row, rn.From.Col
+	endRow, endCol := rn.To.Row, rn.To.Col
+
+	return sheet.GetRange(startRow, startCol, endRow, endCol)
 }
 
 func (fn *FunctionNode) Eval(ctx *EvalContext) (interface{}, error) {

@@ -41,18 +41,20 @@ type PArgLiteral struct {
 
 type PFunctionCall struct {
 	Name *string               `@Ident`
-	Args []*PArgumentWithInfix `LPar @@? ( Sep @@ )* RPar`
+	Args []*PArgumentWithInfix `LPar @@? ( ArgSep @@ )* RPar`
 }
 
 type PReference struct {
-	A1 *string `@A1Ref`
+	A1    *string `@A1Ref`
+	A1End *string `(RangeSep @A1Ref)?`
 }
 
 var langLexer = lexer.MustSimple([]lexer.SimpleRule{
 	{"Eq", `=`},
-	{"Sep", `,`},
+	{"ArgSep", `,`},
 	{"LPar", `\(`},
 	{"RPar", `\)`},
+	{"RangeSep", `:`},
 	{"A1Ref", `[A-Z]+[0-9]+`},
 	{"Ident", `[a-zA-Z_]\w*`},
 	{"Int", `[-+]?\d+`},
@@ -153,11 +155,20 @@ func (call *PArgumentWithInfix) toAst() FormulaNode {
 func (reference *PReference) toAst() FormulaNode {
 	row, col, err := parseA1Notation(*reference.A1)
 	if err != nil {
-		// Well, shit. TODO: Refactor all the toAst() methods to return an error,
-		// because this is a common failure mode.
+		// This should never happen, as the parser should have already validated the A1 notation
 		panic(err)
 	}
-	return &ReferenceNode{Row: row, Col: col}
+	startNode := &ReferenceNode{Row: row, Col: col}
+	if reference.A1End == nil {
+		return startNode
+	}
+	endRow, endCol, err := parseA1Notation(*reference.A1End)
+	if err != nil {
+		// See above comment.
+		panic(err)
+	}
+	endNode := &ReferenceNode{Row: endRow, Col: endCol}
+	return &RangeNode{From: startNode, To: endNode}
 }
 
 func astToString(node FormulaNode) string {
