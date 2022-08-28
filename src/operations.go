@@ -34,6 +34,7 @@ func (ss *Spreadsheet) UpdateCell(cellUuid ReferenceId, content string) {
 	}
 
 	ss.recomputeValues()
+	ss.cleanupRanges()
 }
 
 func (ss *Spreadsheet) AddSheet(sheetName string) error {

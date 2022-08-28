@@ -13,15 +13,16 @@ type ReferenceId uint64
 type Spreadsheet struct {
 	Sheets map[string]*Sheet
 
-	CellMap           map[ReferenceId]*Cell
-	RangeMap          map[ReferenceId]*Range
-	RangeDuplicateMap map[string]*Range
-
+	CellMap  map[ReferenceId]*Cell
 	DirtySet mapset.Set[ReferenceId]
 	// Note that Children and Parents do not imply a nested structure, only dependencies.
-	Parents           map[ReferenceId]mapset.Set[ReferenceId]
-	Children          map[ReferenceId]mapset.Set[ReferenceId]
-	RangeDirtyParents map[ReferenceId]mapset.Set[ReferenceId]
+	Parents  map[ReferenceId]mapset.Set[ReferenceId]
+	Children map[ReferenceId]mapset.Set[ReferenceId]
+
+	RangeMap                map[ReferenceId]*Range
+	RangeDuplicateMap       map[string]*Range
+	RangeDirtyParents       map[ReferenceId]mapset.Set[ReferenceId]
+	RangesMarkedForDeletion []*Range
 
 	Mutex  sync.Mutex
 	NextId ReferenceId

@@ -18,6 +18,14 @@ func (cell *Cell) updateDependencies() {
 	// Remove existing parents, as well as those parents' corresponding children.
 	for parent := range ss.Parents[cell.Uuid].Iter() {
 		ss.Children[parent].Remove(cell.Uuid)
+		// If the parent is a range, decrement the ref count.
+		if rangeParent, ok := ss.RangeMap[parent]; ok {
+			rangeParent.RefCount--
+			if rangeParent.RefCount == 0 {
+				// We don't delete immediately, in case the range is re-added.
+				ss.RangesMarkedForDeletion = append(ss.RangesMarkedForDeletion, rangeParent)
+			}
+		}
 	}
 	ss.Parents[cell.Uuid].Clear()
 
@@ -48,19 +56,20 @@ func (cell *Cell) updateDependencies() {
 			StartCol: ref.Start.Col,
 			EndCol:   ref.End.Col,
 			Sheet:    rangeSheet,
+			RefCount: 1,
 		}
 		// Check if we already have this exact range.
 		if ss.RangeDuplicateMap[currRange.getCompareKey()] != nil {
 			currRange = ss.RangeDuplicateMap[currRange.getCompareKey()]
+			currRange.RefCount++
 		} else {
 			ss.RangeDuplicateMap[currRange.getCompareKey()] = currRange
 			rangeSheet.RangeTree.Add(currRange)
 			ss.RangeMap[currRange.Uuid] = currRange
-			ss.Parents[currRange.Uuid] = mapset.NewThreadUnsafeSet[ReferenceId]()
 			ss.Children[currRange.Uuid] = mapset.NewThreadUnsafeSet[ReferenceId]()
 		}
 
-		// Add the cell to the range's children.
+		ss.Parents[cell.Uuid].Add(currRange.Uuid)
 		ss.Children[currRange.Uuid].Add(cell.Uuid)
 	}
 }
@@ -74,30 +83,30 @@ func (cell *Cell) dirty(visited mapset.Set[ReferenceId]) error {
 		return fmt.Errorf("cycle detected")
 	}
 
-	spreadsheet := cell.Sheet.Spreadsheet
-	spreadsheet.DirtySet.Add(cell.Uuid)
+	ss := cell.Sheet.Spreadsheet
+	ss.DirtySet.Add(cell.Uuid)
 
 	visited.Add(cell.Uuid)
 	// Query all ranges that contain the cell.
 	ranges := cell.Sheet.RangeTree.Query(cell.toRange())
 	for _, cr := range ranges {
 		currRange := cr.(*Range)
-		if visited.Contains(currRange.Uuid) {
-			return fmt.Errorf("cycle detected")
+		err := currRange.dirty(visited)
+		if err != nil {
+			return err
 		}
-		visited.Add(currRange.Uuid)
 
-		if spreadsheet.RangeDirtyParents[currRange.Uuid] == nil {
-			spreadsheet.RangeDirtyParents[currRange.Uuid] = mapset.NewThreadUnsafeSet[ReferenceId]()
+		if ss.RangeDirtyParents[currRange.Uuid] == nil {
+			ss.RangeDirtyParents[currRange.Uuid] = mapset.NewThreadUnsafeSet[ReferenceId]()
 		}
 		// Tracks the cells that need to be recomputed before recomputing the range.
-		spreadsheet.RangeDirtyParents[cell.Uuid].Add(currRange.Uuid)
+		ss.RangeDirtyParents[cell.Uuid].Add(currRange.Uuid)
 	}
 
 	// Dirty all dependent cells.
-	if spreadsheet.Children[cell.Uuid] != nil {
-		for dependent := range spreadsheet.Children[cell.Uuid].Iter() {
-			err := spreadsheet.CellMap[dependent].dirty(visited)
+	if ss.Children[cell.Uuid] == nil {
+		for dependent := range ss.Children[cell.Uuid].Iter() {
+			err := ss.CellMap[dependent].dirty(visited)
 			if err != nil {
 				return err
 			}
@@ -111,6 +120,27 @@ func (cell *Cell) dirty(visited mapset.Set[ReferenceId]) error {
 	return nil
 }
 
+func (cr *Range) dirty(visited mapset.Set[ReferenceId]) error {
+	if visited.Contains(cr.Uuid) {
+		return fmt.Errorf("cycle detected")
+	}
+
+	ss := cr.Sheet.Spreadsheet
+	visited.Add(cr.Uuid)
+
+	// Dirty all dependent cells.
+	if ss.Children[cr.Uuid] != nil {
+		for dependent := range ss.Children[cr.Uuid].Iter() {
+			err := ss.CellMap[dependent].dirty(visited)
+			if err != nil {
+				return err
+			}
+		}
+	}
+	visited.Remove(cr.Uuid)
+	return nil
+}
+
 func (ss *Spreadsheet) recomputeValues() {
 	for cellId := range ss.DirtySet.Iter() {
 		currCell := ss.CellMap[cellId]
@@ -119,5 +149,16 @@ func (ss *Spreadsheet) recomputeValues() {
 		})
 		currCell.Value, currCell.Error = res, err
 		currCell.Value = res
+	}
+}
+
+func (ss *Spreadsheet) cleanupRanges() {
+	for _, rangeObj := range ss.RangesMarkedForDeletion {
+		if rangeObj.RefCount > 0 {
+			continue
+		}
+		rangeObj.Sheet.RangeTree.Delete(rangeObj)
+		delete(ss.RangeMap, rangeObj.Uuid)
+		delete(ss.RangeDuplicateMap, rangeObj.getCompareKey())
 	}
 }

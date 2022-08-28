@@ -1,6 +1,8 @@
 package functions
 
-import "fmt"
+import (
+	"fmt"
+)
 
 // TODO: It may make sense to implement a basic type-checker so that
 //  we don't have to validate the types of arguments in every function.
@@ -153,4 +155,201 @@ func If(args []interface{}) (interface{}, error) {
 	} else {
 		return args[2], nil
 	}
+}
+
+func Not(args []interface{}) (bool, error) {
+	if len(args) != 1 {
+		return false, fmt.Errorf("not: expected 1 argument, got %d", len(args))
+	}
+
+	switch args[0].(type) {
+	case bool:
+		return !args[0].(bool), nil
+	case int:
+		return args[0].(int) == 0, nil
+	case string:
+		return args[0].(string) == "", nil
+	case nil:
+		return true, nil
+	default:
+		return false, fmt.Errorf("not: argument 0 is a %T, not a bool, int, string, or nil", args[0])
+	}
+}
+
+func And(args []interface{}) (bool, error) {
+	if len(args) < 1 {
+		return false, fmt.Errorf("and: expected at least 1 argument, got %d", len(args))
+	}
+
+	var result bool = true
+	for i, arg := range args {
+		switch arg.(type) {
+		case bool:
+			result = result && arg.(bool)
+		case int:
+			result = result && arg.(int) != 0
+		case string:
+			result = result && arg.(string) != ""
+		case nil:
+			result = false
+		default:
+			return false, fmt.Errorf("and: argument %d is a %T, not a bool, int, string, or nil", i, arg)
+		}
+	}
+	return result, nil
+}
+
+func Or(args []interface{}) (bool, error) {
+	if len(args) < 1 {
+		return false, fmt.Errorf("or: expected at least 1 argument, got %d", len(args))
+	}
+
+	var result bool = false
+	for i, arg := range args {
+		switch arg.(type) {
+		case bool:
+			result = result || arg.(bool)
+		case int:
+			result = result || arg.(int) != 0
+		case string:
+			result = result || arg.(string) != ""
+		case nil:
+			result = false
+		default:
+			return false, fmt.Errorf("or: argument %d is a %T, not a bool, int, string, or nil", i, arg)
+		}
+	}
+	return result, nil
+}
+
+func Eq(args []interface{}) (bool, error) {
+	if len(args) != 2 {
+		return false, fmt.Errorf("eq: expected 2 arguments, got %d", len(args))
+	}
+
+	return args[0] == args[1], nil
+}
+
+func Ne(args []interface{}) (bool, error) {
+	if len(args) != 2 {
+		return false, fmt.Errorf("ne: expected 2 arguments, got %d", len(args))
+	}
+
+	return args[0] != args[1], nil
+}
+
+func Gt(args []interface{}) (bool, error) {
+	if len(args) != 2 {
+		return false, fmt.Errorf("gt: expected 2 arguments, got %d", len(args))
+	}
+
+	switch args[0].(type) {
+	case int:
+		return args[0].(int) > args[1].(int), nil
+	case string:
+		return args[0].(string) > args[1].(string), nil
+	default:
+		return false, fmt.Errorf("gt: argument 0 is a %T, not an int or string", args[0])
+	}
+}
+
+func Lt(args []interface{}) (bool, error) {
+	if len(args) != 2 {
+		return false, fmt.Errorf("lt: expected 2 arguments, got %d", len(args))
+	}
+
+	switch args[0].(type) {
+	case int:
+		return args[0].(int) < args[1].(int), nil
+	case string:
+		return args[0].(string) < args[1].(string), nil
+	default:
+		return false, fmt.Errorf("lt: argument 0 is a %T, not an int or string", args[0])
+	}
+}
+
+func Gte(args []interface{}) (bool, error) {
+	if len(args) != 2 {
+		return false, fmt.Errorf("gte: expected 2 arguments, got %d", len(args))
+	}
+
+	switch args[0].(type) {
+	case int:
+		return args[0].(int) >= args[1].(int), nil
+	case string:
+		return args[0].(string) >= args[1].(string), nil
+	default:
+		return false, fmt.Errorf("gte: argument 0 is a %T, not an int or string", args[0])
+	}
+}
+
+func Lte(args []interface{}) (bool, error) {
+	if len(args) != 2 {
+		return false, fmt.Errorf("lte: expected 2 arguments, got %d", len(args))
+	}
+
+	switch args[0].(type) {
+	case int:
+		return args[0].(int) <= args[1].(int), nil
+	case string:
+		return args[0].(string) <= args[1].(string), nil
+	default:
+		return false, fmt.Errorf("lte: argument 0 is a %T, not an int or string", args[0])
+	}
+}
+
+func Sum(args []interface{}) (int, error) {
+	if len(args) < 1 {
+		return 0, fmt.Errorf("sum: expected at least 1 argument, got %d", len(args))
+	}
+
+	var result int
+	for i, arg := range args {
+		switch arg.(type) {
+		case [][]interface{}:
+			for _, row := range arg.([][]interface{}) {
+				for _, cell := range row {
+					// If the cell is not an int, skip it.
+					val, ok := cell.(int)
+					if !ok {
+						continue
+					}
+					result += val
+				}
+			}
+		case int:
+			result += arg.(int)
+		default:
+			return 0, fmt.Errorf("sum: argument %d is a %T, not an int or range", i, arg)
+		}
+	}
+	return result, nil
+}
+
+func Count(args []interface{}) (int, error) {
+	// Counts over all arguments.
+	if len(args) < 1 {
+		return 0, fmt.Errorf("count: expected at least 1 argument, got %d", len(args))
+	}
+
+	var result int
+	for i, arg := range args {
+		switch arg.(type) {
+		case [][]interface{}:
+			for _, row := range arg.([][]interface{}) {
+				for _, cell := range row {
+					_, ok := cell.(int)
+					if !ok {
+						continue
+					}
+					result++
+				}
+			}
+		case int:
+			result++
+		default:
+			return 0, fmt.Errorf("count: argument %d is a %T, not an int or range", i, arg)
+		}
+	}
+	return result, nil
 }

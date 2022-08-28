@@ -83,6 +83,40 @@ func ExecuteFn(fnName string, args []interface{}) (interface{}, error) {
 		return functions.Pow(args)
 	case "IF":
 		return functions.If(args)
+	case "AND":
+		return functions.And(args)
+	case "OR":
+		return functions.Or(args)
+	case "NOT":
+		return functions.Not(args)
+	case "EQ":
+		return functions.Eq(args)
+	case "==":
+		return functions.Eq(args)
+	case "NEQ":
+		return functions.Ne(args)
+	case "!=":
+		return functions.Ne(args)
+	case "GT":
+		return functions.Gt(args)
+	case ">":
+		return functions.Gt(args)
+	case "GTE":
+		return functions.Gte(args)
+	case ">=":
+		return functions.Gte(args)
+	case "LT":
+		return functions.Lt(args)
+	case "<":
+		return functions.Lt(args)
+	case "LTE":
+		return functions.Lte(args)
+	case "<=":
+		return functions.Lte(args)
+	case "SUM":
+		return functions.Sum(args)
+	case "COUNT":
+		return functions.Count(args)
 	default:
 		return nil, fmt.Errorf("execute: unknown function %s", fnName)
 	}

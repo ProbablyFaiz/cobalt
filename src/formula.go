@@ -128,6 +128,6 @@ func (_ *NilNode) toFormula() string {
 
 // misc
 
-func (r *Range) getCompareKey() string {
-	return fmt.Sprintf("%s:%d:%d,%d:%d", strconv.FormatUint(uint64(r.Sheet.Uuid), 10), r.StartRow, r.StartCol, r.EndRow, r.EndCol)
+func (cr *Range) getCompareKey() string {
+	return fmt.Sprintf("%s:%d:%d,%d:%d", strconv.FormatUint(uint64(cr.Sheet.Uuid), 10), cr.StartRow, cr.StartCol, cr.EndRow, cr.EndCol)
 }

@@ -21,7 +21,7 @@ func (ss *Spreadsheet) GetCell(sheetName string, row int, col int) (*Cell, error
 	return &sheet.Cells[row][col], nil
 }
 
-func (sheet *Sheet) GetRange(startRow int, startCol int, endRow int, endCol int) ([][]Cell, error) {
+func (sheet *Sheet) GetRange(startRow int, startCol int, endRow int, endCol int) ([][]interface{}, error) {
 	// Check if the range is valid.
 	if startRow < 0 || startRow >= len(sheet.Cells) {
 		return nil, fmt.Errorf("startRow %d is out of bounds", startRow)
@@ -43,9 +43,12 @@ func (sheet *Sheet) GetRange(startRow int, startCol int, endRow int, endCol int)
 	}
 
 	// Get the range.
-	rangeCells := make([][]Cell, endRow-startRow+1)
+	rangeCells := make([][]interface{}, endRow-startRow+1)
 	for i := startRow; i <= endRow; i++ {
-		rangeCells[i-startRow] = sheet.Cells[i][startCol : endCol+1]
+		rangeCells[i-startRow] = make([]interface{}, endCol-startCol+1)
+		for j := startCol; j <= endCol; j++ {
+			rangeCells[i-startRow][j-startCol] = sheet.Cells[i][j].Value
+		}
 	}
 	return rangeCells, nil
 }
