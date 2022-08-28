@@ -24,8 +24,8 @@ type ReferenceNode struct {
 }
 
 type RangeNode struct {
-	From         *ReferenceNode
-	To           *ReferenceNode
+	Start        *ReferenceNode
+	End          *ReferenceNode
 	ResolvedUuid ReferenceId // If nil, then the range has not been resolved yet
 }
 
@@ -105,7 +105,7 @@ func (rn *ReferenceNode) toFormula() string {
 }
 
 func (rn *RangeNode) toFormula() string {
-	return fmt.Sprintf("%s:%s", rn.From.toFormula(), rn.To.toFormula())
+	return fmt.Sprintf("%s:%s", rn.Start.toFormula(), rn.End.toFormula())
 }
 
 func (fn *FunctionNode) toFormula() string {
@@ -129,5 +129,5 @@ func (_ *NilNode) toFormula() string {
 // misc
 
 func (r *Range) getCompareKey() string {
-	return fmt.Sprintf("%s:%d:%d,%d:%d", strconv.FormatUint(uint64(r.Sheet.Uuid), 10), r.FromRow, r.FromCol, r.ToRow, r.ToCol)
+	return fmt.Sprintf("%s:%d:%d,%d:%d", strconv.FormatUint(uint64(r.Sheet.Uuid), 10), r.StartRow, r.StartCol, r.EndRow, r.EndCol)
 }

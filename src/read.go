@@ -59,7 +59,7 @@ func (cell *Cell) GetUuid() ReferenceId {
 }
 
 func (cr *Range) GetValue() interface{} {
-	values, err := cr.Sheet.GetRange(cr.FromRow, cr.FromCol, cr.ToRow, cr.ToCol)
+	values, err := cr.Sheet.GetRange(cr.StartRow, cr.StartCol, cr.EndRow, cr.EndCol)
 	if err != nil {
 		// For a resolved range, it should be impossible to have an invalid range (I think).
 		panic(err)
@@ -73,25 +73,25 @@ func (cr *Range) GetUuid() ReferenceId {
 
 func (cr *Range) LowAtDimension(dimension uint64) int64 {
 	if dimension == 0 {
-		return int64(cr.FromRow)
+		return int64(cr.StartRow)
 	} else {
-		return int64(cr.FromCol)
+		return int64(cr.StartCol)
 	}
 }
 
 func (cr *Range) HighAtDimension(dimension uint64) int64 {
 	if dimension == 0 {
-		return int64(cr.ToRow)
+		return int64(cr.EndRow)
 	} else {
-		return int64(cr.ToCol)
+		return int64(cr.EndCol)
 	}
 }
 
 func (cr *Range) OverlapsAtDimension(interval augmentedtree.Interval, dimension uint64) bool {
 	if dimension == 0 {
-		return int64(cr.FromRow) <= interval.HighAtDimension(uint64(dimension)) && int64(cr.ToRow) >= interval.LowAtDimension(uint64(dimension))
+		return int64(cr.StartRow) <= interval.HighAtDimension(uint64(dimension)) && int64(cr.EndRow) >= interval.LowAtDimension(uint64(dimension))
 	} else {
-		return int64(cr.FromCol) <= interval.HighAtDimension(uint64(dimension)) && int64(cr.ToCol) <= interval.LowAtDimension(uint64(dimension))
+		return int64(cr.StartCol) <= interval.HighAtDimension(uint64(dimension)) && int64(cr.EndCol) <= interval.LowAtDimension(uint64(dimension))
 	}
 }
 
@@ -101,11 +101,11 @@ func (cr *Range) ID() uint64 {
 
 func (cell *Cell) toRange() *Range {
 	return &Range{
-		Sheet:   cell.Sheet,
-		FromRow: cell.Row,
-		FromCol: cell.Col,
-		ToRow:   cell.Row,
-		ToCol:   cell.Col,
-		Uuid:    cell.Uuid,
+		Sheet:    cell.Sheet,
+		StartRow: cell.Row,
+		StartCol: cell.Col,
+		EndRow:   cell.Row,
+		EndCol:   cell.Col,
+		Uuid:     cell.Uuid,
 	}
 }

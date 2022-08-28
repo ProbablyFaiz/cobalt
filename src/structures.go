@@ -49,10 +49,10 @@ type Cell struct {
 
 type Range struct {
 	Uuid     ReferenceId
-	FromRow  int
-	ToRow    int
-	FromCol  int
-	ToCol    int
+	StartRow int
+	EndRow   int
+	StartCol int
+	EndCol   int
 	Sheet    *Sheet
 	RefCount int
 }

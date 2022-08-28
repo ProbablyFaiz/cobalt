@@ -39,15 +39,15 @@ func (cell *Cell) updateDependencies() {
 
 	rangeRefs := (*cell.Formula).getRangeRefs()
 	for _, ref := range rangeRefs {
-		rangeSheet := ref.To.Sheet
+		rangeSheet := ref.End.Sheet
 		// Create a range object for the reference.
 		currRange := &Range{
-			Uuid:    ss.getNextId(),
-			FromRow: ref.From.Row,
-			ToRow:   ref.To.Row,
-			FromCol: ref.From.Col,
-			ToCol:   ref.To.Col,
-			Sheet:   rangeSheet,
+			Uuid:     ss.getNextId(),
+			StartRow: ref.Start.Row,
+			EndRow:   ref.End.Row,
+			StartCol: ref.Start.Col,
+			EndCol:   ref.End.Col,
+			Sheet:    rangeSheet,
 		}
 		// Check if we already have this exact range.
 		if ss.RangeDuplicateMap[currRange.getCompareKey()] != nil {

@@ -168,7 +168,7 @@ func (reference *PReference) toAst() FormulaNode {
 		panic(err)
 	}
 	endNode := &ReferenceNode{Row: endRow, Col: endCol}
-	return &RangeNode{From: startNode, To: endNode}
+	return &RangeNode{Start: startNode, End: endNode}
 }
 
 func astToString(node FormulaNode) string {
