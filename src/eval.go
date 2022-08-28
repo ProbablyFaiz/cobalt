@@ -119,6 +119,8 @@ func ExecuteFn(fnName string, args []interface{}) (interface{}, error) {
 		return functions.Sum(args)
 	case "COUNT":
 		return functions.Count(args)
+	case "AVERAGE":
+		return functions.Average(args)
 	default:
 		return nil, fmt.Errorf("execute: unknown function %s", fnName)
 	}

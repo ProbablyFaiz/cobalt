@@ -72,19 +72,19 @@ func Mul(args []interface{}) (int, error) {
 	return result, nil
 }
 
-func Div(args []interface{}) (int, error) {
+func Div(args []interface{}) (float64, error) {
 	if len(args) != 2 {
 		return 0, fmt.Errorf("div: expected 2 arguments, got %d", len(args))
 	}
 
-	var result int
+	var result float64
 	for i, arg := range args {
 		switch arg.(type) {
 		case int:
 			if i == 0 {
-				result = arg.(int)
+				result = arg.(float64)
 			} else {
-				result /= arg.(int)
+				result /= arg.(float64)
 			}
 		default:
 			return 0, fmt.Errorf("div: argument %d is a %T, not an int", i, arg)
@@ -352,4 +352,25 @@ func Count(args []interface{}) (int, error) {
 		}
 	}
 	return result, nil
+}
+
+func Average(args []interface{}) (float64, error) {
+	if len(args) < 1 {
+		return 0, fmt.Errorf("average: expected at least 1 argument, got %d", len(args))
+	}
+
+	// Use sum, count, and div to calculate the average.
+	sum, err := Sum(args)
+	if err != nil {
+		return 0, fmt.Errorf("average: %s", err)
+	}
+	count, err := Count(args)
+	if err != nil {
+		return 0, fmt.Errorf("average: %s", err)
+	}
+	res, err := Div([]interface{}{sum, count})
+	if err != nil {
+		return 0, fmt.Errorf("average: %s", err)
+	}
+	return res, nil
 }
