@@ -50,6 +50,7 @@ type PReference struct {
 }
 
 var langLexer = lexer.MustSimple([]lexer.SimpleRule{
+	{"InfixOp", `(-)|(\+)|(\*)|(/)|(%)|(&&)|(\|\|)|(&)|(\|)|(<)|(>)|(<=)|(>=)|(!=)|(==)`},
 	{"Eq", `=`},
 	{"ArgSep", `,`},
 	{"LPar", `\(`},
@@ -58,7 +59,6 @@ var langLexer = lexer.MustSimple([]lexer.SimpleRule{
 	{"A1Ref", `[A-Z]+[0-9]+`},
 	{"Ident", `[a-zA-Z_]\w*`},
 	{"Int", `[-+]?\d+`},
-	{"InfixOp", `[-+*/]`},
 	{"String", `"(\\"|[^"])*"`},
 	//{"BareString", `^[^=].*`},
 	{"Whitespace", `\s+`},
