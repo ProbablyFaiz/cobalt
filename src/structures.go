@@ -6,17 +6,19 @@ import (
 	"sync"
 )
 
-type ReferenceId string
+type ReferenceId uint64
 
 type Spreadsheet struct {
 	Sheets   map[string]*Sheet
-	Mutex    sync.Mutex
 	CellMap  map[ReferenceId]*Cell
 	RangeMap map[ReferenceId]*Range
 	DirtySet mapset.Set[ReferenceId]
 	// Note that Children and Parents do not imply a nested structure, only dependencies.
 	Parents  map[ReferenceId]mapset.Set[ReferenceId]
 	Children map[ReferenceId]mapset.Set[ReferenceId]
+
+	Mutex  sync.Mutex
+	NextId ReferenceId
 }
 
 type Sheet struct {
@@ -31,6 +33,8 @@ type Cell struct {
 
 	Uuid  ReferenceId
 	Sheet *Sheet
+	Row   int
+	Col   int
 
 	Formula    *FormulaNode
 	RawContent string
@@ -38,8 +42,10 @@ type Cell struct {
 
 type Range struct {
 	Uuid     ReferenceId
-	From     int
-	To       int
+	FromRow  int
+	ToRow    int
+	FromCol  int
+	ToCol    int
 	Sheet    *Sheet
 	RefCount int
 }
@@ -57,6 +63,8 @@ func NewSpreadsheet() *Spreadsheet {
 		DirtySet: mapset.NewThreadUnsafeSet[ReferenceId](),
 		Parents:  make(map[ReferenceId]mapset.Set[ReferenceId]),
 		Children: make(map[ReferenceId]mapset.Set[ReferenceId]),
+		Mutex:    sync.Mutex{},
+		NextId:   0,
 	}
 	// Add the default sheet.
 	err := ss.AddSheet("Sheet1")
@@ -64,4 +72,12 @@ func NewSpreadsheet() *Spreadsheet {
 		return nil
 	}
 	return ss
+}
+
+func (ss *Spreadsheet) GetNextId() ReferenceId {
+	ss.Mutex.Lock()
+	defer ss.Mutex.Unlock()
+	nextId := ss.NextId
+	ss.NextId++
+	return nextId
 }

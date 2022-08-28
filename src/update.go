@@ -3,8 +3,6 @@ package src
 import (
 	"fmt"
 	"github.com/Workiva/go-datastructures/augmentedtree"
-	"github.com/deckarep/golang-set/v2"
-	"github.com/google/uuid"
 )
 
 const DefaultNumCols = 26
@@ -69,71 +67,13 @@ func (ss *Spreadsheet) AddSheet(sheetName string) error {
 		for j := 0; j < DefaultNumCols; j++ {
 			var formula FormulaNode = &NilNode{}
 			cells[i][j] = Cell{
-				Uuid:    ReferenceId(uuid.New().String()),
+				Uuid:    ss.GetNextId(),
 				Sheet:   newSheet,
 				Formula: &formula,
 				Value:   nil,
 			}
 			ss.CellMap[cells[i][j].Uuid] = &cells[i][j]
 		}
-	}
-	return nil
-}
-
-func (cell *Cell) updateDependencies() {
-	ss := cell.Sheet.Spreadsheet
-	// Check if ss.Children[cell.Uuid] and ss.Parents[cell.Uuid] are nil and if so, initialize them.
-	if ss.Children[cell.Uuid] == nil {
-		ss.Children[cell.Uuid] = mapset.NewThreadUnsafeSet[ReferenceId]()
-	}
-	if ss.Parents[cell.Uuid] == nil {
-		ss.Parents[cell.Uuid] = mapset.NewThreadUnsafeSet[ReferenceId]()
-	}
-
-	// Remove existing parents, as well as those parents' corresponding children.
-	for parent := range ss.Parents[cell.Uuid].Iter() {
-		ss.Children[parent].Remove(cell.Uuid)
-	}
-	ss.Parents[cell.Uuid].Clear()
-
-	refs := (*cell.Formula).getRefs()
-	for _, ref := range refs {
-		if ref.Sheet == nil {
-			ref.Sheet = cell.Sheet
-		}
-		// Resolve the reference.
-		parent := ref.Sheet.Cells[ref.Row][ref.Col]
-		ref.ResolvedUuid = parent.Uuid
-		// Check if ss.Parents[parent.Uuid] is nil and initialize it if so.
-		if ss.Parents[parent.Uuid] == nil {
-			ss.Parents[parent.Uuid] = mapset.NewThreadUnsafeSet[ReferenceId]()
-		}
-		ss.Parents[parent.Uuid].Add(cell.Uuid)
-		ss.Children[cell.Uuid].Add(parent.Uuid)
-	}
-}
-
-func (cell *Cell) dirty(visited mapset.Set[ReferenceId]) error {
-	if visited == nil {
-		visited = mapset.NewThreadUnsafeSet[ReferenceId]()
-	}
-
-	if visited.Contains(cell.Uuid) {
-		return fmt.Errorf("cycle detected")
-	}
-
-	spreadsheet := cell.Sheet.Spreadsheet
-	spreadsheet.DirtySet.Add(cell.Uuid)
-	// Dirty all dependent cells.
-	if spreadsheet.Children[cell.Uuid] != nil {
-		visited.Add(cell.Uuid)
-		for dependent := range spreadsheet.Children[cell.Uuid].Iter() {
-			err := spreadsheet.CellMap[dependent].dirty(visited)
-			if err != nil {
-				return err
-			}
-		}
-		visited.Remove(cell.Uuid)
 	}
 	return nil
 }
