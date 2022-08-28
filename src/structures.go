@@ -71,6 +71,7 @@ func NewSpreadsheet() *Spreadsheet {
 		DirtySet:          mapset.NewThreadUnsafeSet[ReferenceId](),
 		Parents:           make(map[ReferenceId]mapset.Set[ReferenceId]),
 		Children:          make(map[ReferenceId]mapset.Set[ReferenceId]),
+		RangeDuplicateMap: make(map[string]*Range),
 		RangeDirtyParents: make(map[ReferenceId]mapset.Set[ReferenceId]),
 		Mutex:             sync.Mutex{},
 		NextId:            0,
@@ -84,7 +85,6 @@ func NewSpreadsheet() *Spreadsheet {
 }
 
 func (ss *Spreadsheet) getNextId() ReferenceId {
-	nextId := ss.NextId
 	ss.NextId++
-	return nextId
+	return ss.NextId
 }

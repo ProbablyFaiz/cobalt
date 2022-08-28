@@ -14,7 +14,7 @@ func main() {
 	cell01, _ := ss.GetCell("Sheet1", 0, 1)
 	ss.UpdateCell(cell01.Uuid, `8`)
 	cell02, _ := ss.GetCell("Sheet1", 0, 2)
-	ss.UpdateCell(cell02.Uuid, `=If(A1 - B1, 3, 4)`)
+	ss.UpdateCell(cell02.Uuid, `=Sum(A1:B1)`)
 
 	// Print the value of the cell.
 	cell, _ := ss.GetCell("Sheet1", 0, 2)

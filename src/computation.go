@@ -47,7 +47,10 @@ func (cell *Cell) updateDependencies() {
 
 	rangeRefs := (*cell.Formula).getRangeRefs()
 	for _, ref := range rangeRefs {
-		rangeSheet := ref.End.Sheet
+		rangeSheet := ref.Start.Sheet
+		if rangeSheet == nil {
+			rangeSheet = cell.Sheet
+		}
 		// Create a range object for the reference.
 		currRange := &Range{
 			Uuid:     ss.getNextId(),
@@ -68,6 +71,7 @@ func (cell *Cell) updateDependencies() {
 			ss.RangeMap[currRange.Uuid] = currRange
 			ss.Children[currRange.Uuid] = mapset.NewThreadUnsafeSet[ReferenceId]()
 		}
+		ref.ResolvedUuid = currRange.Uuid
 
 		ss.Parents[cell.Uuid].Add(currRange.Uuid)
 		ss.Children[currRange.Uuid].Add(cell.Uuid)
