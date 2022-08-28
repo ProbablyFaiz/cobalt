@@ -6,22 +6,29 @@ import (
 	"sync"
 )
 
+// TODO: Rename all the ReferenceId's that are called Uuid's, they are not uuid's anymore.
+
 type ReferenceId uint64
 
 type Spreadsheet struct {
-	Sheets   map[string]*Sheet
-	CellMap  map[ReferenceId]*Cell
-	RangeMap map[ReferenceId]*Range
+	Sheets map[string]*Sheet
+
+	CellMap           map[ReferenceId]*Cell
+	RangeMap          map[ReferenceId]*Range
+	RangeDuplicateMap map[string]*Range
+
 	DirtySet mapset.Set[ReferenceId]
 	// Note that Children and Parents do not imply a nested structure, only dependencies.
-	Parents  map[ReferenceId]mapset.Set[ReferenceId]
-	Children map[ReferenceId]mapset.Set[ReferenceId]
+	Parents           map[ReferenceId]mapset.Set[ReferenceId]
+	Children          map[ReferenceId]mapset.Set[ReferenceId]
+	RangeDirtyParents map[ReferenceId]mapset.Set[ReferenceId]
 
 	Mutex  sync.Mutex
 	NextId ReferenceId
 }
 
 type Sheet struct {
+	Uuid        ReferenceId
 	Spreadsheet *Spreadsheet
 	Cells       [][]Cell
 	RangeTree   augmentedtree.Tree
@@ -57,14 +64,15 @@ type ValueContainer interface {
 
 func NewSpreadsheet() *Spreadsheet {
 	ss := &Spreadsheet{
-		Sheets:   make(map[string]*Sheet),
-		CellMap:  make(map[ReferenceId]*Cell),
-		RangeMap: make(map[ReferenceId]*Range),
-		DirtySet: mapset.NewThreadUnsafeSet[ReferenceId](),
-		Parents:  make(map[ReferenceId]mapset.Set[ReferenceId]),
-		Children: make(map[ReferenceId]mapset.Set[ReferenceId]),
-		Mutex:    sync.Mutex{},
-		NextId:   0,
+		Sheets:            make(map[string]*Sheet),
+		CellMap:           make(map[ReferenceId]*Cell),
+		RangeMap:          make(map[ReferenceId]*Range),
+		DirtySet:          mapset.NewThreadUnsafeSet[ReferenceId](),
+		Parents:           make(map[ReferenceId]mapset.Set[ReferenceId]),
+		Children:          make(map[ReferenceId]mapset.Set[ReferenceId]),
+		RangeDirtyParents: make(map[ReferenceId]mapset.Set[ReferenceId]),
+		Mutex:             sync.Mutex{},
+		NextId:            0,
 	}
 	// Add the default sheet.
 	err := ss.AddSheet("Sheet1")
@@ -74,9 +82,7 @@ func NewSpreadsheet() *Spreadsheet {
 	return ss
 }
 
-func (ss *Spreadsheet) GetNextId() ReferenceId {
-	ss.Mutex.Lock()
-	defer ss.Mutex.Unlock()
+func (ss *Spreadsheet) getNextId() ReferenceId {
 	nextId := ss.NextId
 	ss.NextId++
 	return nextId

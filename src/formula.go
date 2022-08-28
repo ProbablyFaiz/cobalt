@@ -1,19 +1,19 @@
 package src
 
-import "fmt"
+import (
+	"fmt"
+	"strconv"
+)
 
 type FormulaNode interface {
 	eval(ctx *EvalContext) (interface{}, error)
 	getRefs() []*ReferenceNode
+	getRangeRefs() []*RangeNode
 	toFormula() string
 }
 
 type LiteralNode struct {
 	Value interface{}
-}
-
-type Referencer interface {
-	Covers(r *ReferenceNode) bool
 }
 
 type ReferenceNode struct {
@@ -53,9 +53,7 @@ func (rn *ReferenceNode) getRefs() []*ReferenceNode {
 }
 
 func (rn *RangeNode) getRefs() []*ReferenceNode {
-	// TODO: We probably want to set up global range tracking with segment
-	//  trees, so we can efficiently dirty ranges etc.
-	panic("not implemented")
+	return make([]*ReferenceNode, 0)
 }
 
 func (fn *FunctionNode) getRefs() []*ReferenceNode {
@@ -68,6 +66,32 @@ func (fn *FunctionNode) getRefs() []*ReferenceNode {
 
 func (_ *NilNode) getRefs() []*ReferenceNode {
 	return make([]*ReferenceNode, 0)
+}
+
+// getRangeRefs implementations
+
+func (ln *LiteralNode) getRangeRefs() []*RangeNode {
+	return make([]*RangeNode, 0)
+}
+
+func (rn *ReferenceNode) getRangeRefs() []*RangeNode {
+	return make([]*RangeNode, 0)
+}
+
+func (rn *RangeNode) getRangeRefs() []*RangeNode {
+	return []*RangeNode{rn}
+}
+
+func (fn *FunctionNode) getRangeRefs() []*RangeNode {
+	refs := make([]*RangeNode, 0)
+	for _, arg := range fn.Args {
+		refs = append(refs, arg.getRangeRefs()...)
+	}
+	return refs
+}
+
+func (_ *NilNode) getRangeRefs() []*RangeNode {
+	return make([]*RangeNode, 0)
 }
 
 // toFormula implementations
@@ -101,3 +125,9 @@ func (_ *NilNode) toFormula() string {
 }
 
 // eval implementations in src/eval.go
+
+// misc
+
+func (r *Range) getCompareKey() string {
+	return fmt.Sprintf("%s:%d:%d,%d:%d", strconv.FormatUint(uint64(r.Sheet.Uuid), 10), r.FromRow, r.FromCol, r.ToRow, r.ToCol)
+}

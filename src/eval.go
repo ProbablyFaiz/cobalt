@@ -15,7 +15,7 @@ func (cell *Cell) GetOrComputeValue() (interface{}, error) {
 	return cell.Value, nil
 }
 
-func (ln *LiteralNode) eval(ctx *EvalContext) (interface{}, error) {
+func (ln *LiteralNode) eval(_ *EvalContext) (interface{}, error) {
 	return ln.Value, nil
 }
 
@@ -24,6 +24,13 @@ func (rn *ReferenceNode) eval(ctx *EvalContext) (interface{}, error) {
 }
 
 func (rn *RangeNode) eval(ctx *EvalContext) (interface{}, error) {
+	// First, evaluate the range's dirty parent cells.
+	ss := ctx.Cell.Sheet.Spreadsheet
+	for _, cellId := range ss.RangeDirtyParents[rn.ResolvedUuid].Iter() {
+		_, _ = ss.CellMap[cellId].GetOrComputeValue()
+		ss.RangeDirtyParents[rn.ResolvedUuid].Remove(cellId)
+	}
+
 	// Gets the range of cells in the sheet
 	sheet := rn.To.Sheet
 	startRow, startCol := rn.From.Row, rn.From.Col

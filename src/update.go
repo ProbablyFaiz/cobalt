@@ -18,30 +18,22 @@ func (ss *Spreadsheet) UpdateCell(cellUuid ReferenceId, content string) {
 	cell := ss.CellMap[cellUuid]
 
 	cell.RawContent = content
-
 	newFormula, err := Parse(content)
 	if err != nil {
 		cell.Formula, cell.Value, cell.Error = nil, nil, err
 		return
 	}
-
 	cell.Formula = &newFormula
-	cell.updateDependencies()
 
+	cell.updateDependencies()
 	err = cell.dirty(nil)
+
 	if err != nil {
 		cell.Value, cell.Error = nil, err
 		return
 	}
 
-	for currCellId := range ss.DirtySet.Iter() {
-		currCell := ss.CellMap[currCellId]
-		res, err := (*currCell.Formula).eval(&EvalContext{
-			Cell: currCell,
-		})
-		currCell.Value, currCell.Error = res, err
-		currCell.Value = res
-	}
+	ss.recomputeValues()
 }
 
 func (ss *Spreadsheet) AddSheet(sheetName string) error {
@@ -56,6 +48,7 @@ func (ss *Spreadsheet) AddSheet(sheetName string) error {
 
 	cells := make([][]Cell, DefaultNumRows)
 	newSheet := &Sheet{
+		Uuid:        ss.getNextId(),
 		Spreadsheet: ss,
 		Cells:       cells,
 		RangeTree:   augmentedtree.New(2),
@@ -67,8 +60,10 @@ func (ss *Spreadsheet) AddSheet(sheetName string) error {
 		for j := 0; j < DefaultNumCols; j++ {
 			var formula FormulaNode = &NilNode{}
 			cells[i][j] = Cell{
-				Uuid:    ss.GetNextId(),
+				Uuid:    ss.getNextId(),
 				Sheet:   newSheet,
+				Row:     i,
+				Col:     j,
 				Formula: &formula,
 				Value:   nil,
 			}
