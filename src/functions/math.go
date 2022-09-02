@@ -2,72 +2,95 @@ package functions
 
 import (
 	"fmt"
+	"math"
 )
 
 // TODO: It may make sense to implement a basic type-checker so that
 //  we don't have to validate the types of arguments in every function.
 
-func Concat(args []interface{}) (string, error) {
-	var result string
-	for i, arg := range args {
-		switch arg.(type) {
-		case string:
-			result += arg.(string)
-		default:
-			return "", fmt.Errorf("concat: argument %d is a %T, not a string", i, arg)
-		}
-
-	}
-	return result, nil
-}
-
-func Add(args []interface{}) (int, error) {
-	var result int
+func Add(args []interface{}) (interface{}, error) {
+	var result interface{} = 0
 	for i, arg := range args {
 		switch arg.(type) {
 		case int:
-			result += arg.(int)
+			switch result.(type) {
+			case int:
+				result = result.(int) + arg.(int)
+			case float64:
+				result = result.(float64) + float64(arg.(int))
+			}
+		case float64:
+			switch result.(type) {
+			case int:
+				result = float64(result.(int)) + arg.(float64)
+			case float64:
+				result = result.(float64) + arg.(float64)
+			}
 		default:
-			return 0, fmt.Errorf("add: argument %d is a %T, not an int", i, arg)
+			return 0, fmt.Errorf("add: argument %d is a %T, not an int or float64", i, arg)
 		}
-
 	}
 	return result, nil
 }
 
-func Sub(args []interface{}) (int, error) {
+func Sub(args []interface{}) (interface{}, error) {
 	// Must have at least 1 argument
 	if len(args) < 1 {
 		return 0, fmt.Errorf("sub: expected at least 1 argument, got %d", len(args))
 	}
 
-	var result int
+	var result interface{}
 	for i, arg := range args {
 		switch arg.(type) {
 		case int:
 			if i == 0 {
-				result = arg.(int)
+				result = arg
 			} else {
-				result -= arg.(int)
+				switch result.(type) {
+				case int:
+					result = result.(int) - arg.(int)
+				case float64:
+					result = result.(float64) - float64(arg.(int))
+				}
+			}
+		case float64:
+			if i == 0 {
+				result = arg
+			}
+			switch result.(type) {
+			case int:
+				result = float64(result.(int)) - arg.(float64)
+			case float64:
+				result = result.(float64) - arg.(float64)
 			}
 		default:
-			return 0, fmt.Errorf("sub: argument %d is a %T, not an int", i, arg)
+			return 0, fmt.Errorf("sub: argument %d is a %T, not an int or float64", i, arg)
 		}
-
 	}
 	return result, nil
 }
 
-func Mul(args []interface{}) (int, error) {
-	var result int = 1
+func Mul(args []interface{}) (interface{}, error) {
+	var result interface{} = 1
 	for i, arg := range args {
 		switch arg.(type) {
 		case int:
-			result *= arg.(int)
+			switch result.(type) {
+			case int:
+				result = result.(int) * arg.(int)
+			case float64:
+				result = result.(float64) * float64(arg.(int))
+			}
+		case float64:
+			switch result.(type) {
+			case int:
+				result = float64(result.(int)) * arg.(float64)
+			case float64:
+				result = result.(float64) * arg.(float64)
+			}
 		default:
-			return 0, fmt.Errorf("mul: argument %d is a %T, not an int", i, arg)
+			return 0, fmt.Errorf("mul: argument %d is a %T, not an int or float64", i, arg)
 		}
-
 	}
 	return result, nil
 }
@@ -77,20 +100,32 @@ func Div(args []interface{}) (float64, error) {
 		return 0, fmt.Errorf("div: expected 2 arguments, got %d", len(args))
 	}
 
-	var result float64
+	var result interface{}
 	for i, arg := range args {
 		switch arg.(type) {
 		case int:
 			if i == 0 {
-				result = arg.(float64)
+				result = float64(arg.(int))
 			} else {
-				result /= arg.(float64)
+				switch result.(type) {
+				case float64:
+					result = result.(float64) / float64(arg.(int))
+				}
+			}
+		case float64:
+			if i == 0 {
+				result = arg
+			} else {
+				switch result.(type) {
+				case float64:
+					result = result.(float64) / arg.(float64)
+				}
 			}
 		default:
-			return 0, fmt.Errorf("div: argument %d is a %T, not an int", i, arg)
+			return 0, fmt.Errorf("div: argument %d is a %T, not an int or float64", i, arg)
 		}
 	}
-	return result, nil
+	return result.(float64), nil
 }
 
 func Mod(args []interface{}) (int, error) {
@@ -114,18 +149,38 @@ func Mod(args []interface{}) (int, error) {
 	return result, nil
 }
 
-func Pow(args []interface{}) (int, error) {
+func Pow(args []interface{}) (interface{}, error) {
 	if len(args) != 2 {
 		return 0, fmt.Errorf("pow: expected 2 arguments, got %d", len(args))
 	}
 
-	var result int
+	var result interface{}
 	for i, arg := range args {
 		switch arg.(type) {
 		case int:
-			result ^= arg.(int)
+			if i == 0 {
+				result = arg
+			} else {
+				switch result.(type) {
+				case int:
+					result = int(math.Pow(float64(result.(int)), float64(arg.(int))))
+				case float64:
+					result = math.Pow(result.(float64), float64(arg.(int)))
+				}
+			}
+		case float64:
+			if i == 0 {
+				result = arg
+			} else {
+				switch result.(type) {
+				case int:
+					result = math.Pow(float64(result.(int)), arg.(float64))
+				case float64:
+					result = math.Pow(result.(float64), arg.(float64))
+				}
+			}
 		default:
-			return 0, fmt.Errorf("pow: argument %d is a %T, not an int", i, arg)
+			return 0, fmt.Errorf("pow: argument %d is a %T, not an int or float64", i, arg)
 		}
 	}
 	return result, nil
@@ -142,12 +197,14 @@ func If(args []interface{}) (interface{}, error) {
 		truthy = args[0].(bool)
 	case int:
 		truthy = args[0].(int) != 0
+	case float64:
+		truthy = args[0].(float64) != 0
 	case string:
 		truthy = args[0].(string) != ""
 	case nil:
 		truthy = false
 	default:
-		return 0, fmt.Errorf("if: argument 0 is a %T, not a bool, int, string, or nil", args[0])
+		return 0, fmt.Errorf("if: argument 0 is a %T, not a bool, int, float, string, or nil", args[0])
 	}
 
 	if truthy {
@@ -167,12 +224,14 @@ func Not(args []interface{}) (bool, error) {
 		return !args[0].(bool), nil
 	case int:
 		return args[0].(int) == 0, nil
+	case float64:
+		return args[0].(float64) == 0, nil
 	case string:
 		return args[0].(string) == "", nil
 	case nil:
 		return true, nil
 	default:
-		return false, fmt.Errorf("not: argument 0 is a %T, not a bool, int, string, or nil", args[0])
+		return false, fmt.Errorf("not: argument 0 is a %T, not a bool, int, float, string, or nil", args[0])
 	}
 }
 
@@ -296,157 +355,4 @@ func Lte(args []interface{}) (bool, error) {
 	default:
 		return false, fmt.Errorf("lte: argument 0 is a %T, not an int or string", args[0])
 	}
-}
-
-func Sum(args []interface{}) (int, error) {
-	if len(args) < 1 {
-		return 0, fmt.Errorf("sum: expected at least 1 argument, got %d", len(args))
-	}
-
-	var result int
-	for i, arg := range args {
-		switch arg.(type) {
-		case [][]interface{}:
-			for _, row := range arg.([][]interface{}) {
-				for _, cell := range row {
-					// If the cell is not an int, skip it.
-					val, ok := cell.(int)
-					if !ok {
-						continue
-					}
-					result += val
-				}
-			}
-		case int:
-			result += arg.(int)
-		default:
-			return 0, fmt.Errorf("sum: argument %d is a %T, not an int or range", i, arg)
-		}
-	}
-	return result, nil
-}
-
-func Count(args []interface{}) (int, error) {
-	// Counts over all arguments.
-	if len(args) < 1 {
-		return 0, fmt.Errorf("count: expected at least 1 argument, got %d", len(args))
-	}
-
-	var result int
-	for i, arg := range args {
-		switch arg.(type) {
-		case [][]interface{}:
-			for _, row := range arg.([][]interface{}) {
-				for _, cell := range row {
-					_, ok := cell.(int)
-					if !ok {
-						continue
-					}
-					result++
-				}
-			}
-		case int:
-			result++
-		default:
-			return 0, fmt.Errorf("count: argument %d is a %T, not an int or range", i, arg)
-		}
-	}
-	return result, nil
-}
-
-func Average(args []interface{}) (float64, error) {
-	if len(args) < 1 {
-		return 0, fmt.Errorf("average: expected at least 1 argument, got %d", len(args))
-	}
-
-	// Use sum, count, and div to calculate the average.
-	sum, err := Sum(args)
-	if err != nil {
-		return 0, fmt.Errorf("average: %s", err)
-	}
-	count, err := Count(args)
-	if err != nil {
-		return 0, fmt.Errorf("average: %s", err)
-	}
-	res, err := Div([]interface{}{sum, count})
-	if err != nil {
-		return 0, fmt.Errorf("average: %s", err)
-	}
-	return res, nil
-}
-
-func Min(args []interface{}) (int, error) {
-	if len(args) < 1 {
-		return 0, fmt.Errorf("min: expected at least 1 argument, got %d", len(args))
-	}
-
-	// Calculate the minimum value among the arguments (which can be ints or ranges).
-	// We use a pointer to an int so that we can distinguish between the case where
-	// we haven't seen any values yet and the case where the minimum value is 0.
-	var min *int = nil
-	for i, arg := range args {
-		switch arg.(type) {
-		case [][]interface{}:
-			for _, row := range arg.([][]interface{}) {
-				for _, cell := range row {
-					val, ok := cell.(int)
-					if !ok {
-						continue
-					}
-					if min == nil || val < *min {
-						min = &val
-					}
-				}
-			}
-		case int:
-			argInt := arg.(int)
-			if min == nil || argInt < *min {
-				min = &argInt
-			}
-		default:
-			return 0, fmt.Errorf("min: argument %d is a %T, not an int or range", i, arg)
-		}
-	}
-	if min == nil {
-		return 0, fmt.Errorf("min: no arguments are ints or ranges")
-	}
-	return *min, nil
-}
-
-func Max(args []interface{}) (int, error) {
-	if len(args) < 1 {
-		return 0, fmt.Errorf("max: expected at least 1 argument, got %d", len(args))
-	}
-
-	// Calculate the maximum value among the arguments (which can be ints or ranges).
-	// We use a pointer to an int so that we can distinguish between the case where
-	// we haven't seen any values yet and the case where the maximum value is 0.
-	var max *int = nil
-	for i, arg := range args {
-		switch arg.(type) {
-		case [][]interface{}:
-			for _, row := range arg.([][]interface{}) {
-				for _, cell := range row {
-					val, ok := cell.(int)
-					if !ok {
-						continue
-					}
-					if max == nil || val > *max {
-						max = &val
-					}
-				}
-			}
-		case int:
-			argInt := arg.(int)
-			if max == nil || argInt > *max {
-				max = &argInt
-			}
-		default:
-			return 0, fmt.Errorf("max: argument %d is a %T, not an int or range", i, arg)
-		}
-	}
-	if max == nil {
-		return 0, fmt.Errorf("max: no arguments are ints or ranges")
-	}
-	return *max, nil
 }
