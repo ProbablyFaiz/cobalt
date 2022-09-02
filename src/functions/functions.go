@@ -374,3 +374,79 @@ func Average(args []interface{}) (float64, error) {
 	}
 	return res, nil
 }
+
+func Min(args []interface{}) (int, error) {
+	if len(args) < 1 {
+		return 0, fmt.Errorf("min: expected at least 1 argument, got %d", len(args))
+	}
+
+	// Calculate the minimum value among the arguments (which can be ints or ranges).
+	// We use a pointer to an int so that we can distinguish between the case where
+	// we haven't seen any values yet and the case where the minimum value is 0.
+	var min *int = nil
+	for i, arg := range args {
+		switch arg.(type) {
+		case [][]interface{}:
+			for _, row := range arg.([][]interface{}) {
+				for _, cell := range row {
+					val, ok := cell.(int)
+					if !ok {
+						continue
+					}
+					if min == nil || val < *min {
+						min = &val
+					}
+				}
+			}
+		case int:
+			argInt := arg.(int)
+			if min == nil || argInt < *min {
+				min = &argInt
+			}
+		default:
+			return 0, fmt.Errorf("min: argument %d is a %T, not an int or range", i, arg)
+		}
+	}
+	if min == nil {
+		return 0, fmt.Errorf("min: no arguments are ints or ranges")
+	}
+	return *min, nil
+}
+
+func Max(args []interface{}) (int, error) {
+	if len(args) < 1 {
+		return 0, fmt.Errorf("max: expected at least 1 argument, got %d", len(args))
+	}
+
+	// Calculate the maximum value among the arguments (which can be ints or ranges).
+	// We use a pointer to an int so that we can distinguish between the case where
+	// we haven't seen any values yet and the case where the maximum value is 0.
+	var max *int = nil
+	for i, arg := range args {
+		switch arg.(type) {
+		case [][]interface{}:
+			for _, row := range arg.([][]interface{}) {
+				for _, cell := range row {
+					val, ok := cell.(int)
+					if !ok {
+						continue
+					}
+					if max == nil || val > *max {
+						max = &val
+					}
+				}
+			}
+		case int:
+			argInt := arg.(int)
+			if max == nil || argInt > *max {
+				max = &argInt
+			}
+		default:
+			return 0, fmt.Errorf("max: argument %d is a %T, not an int or range", i, arg)
+		}
+	}
+	if max == nil {
+		return 0, fmt.Errorf("max: no arguments are ints or ranges")
+	}
+	return *max, nil
+}

@@ -1,7 +1,7 @@
 package main
 
 import (
-	. "pasado/src"
+	. "pasado/src/core"
 )
 
 func main() {
@@ -19,4 +19,11 @@ func main() {
 	// Print the value of the cell.
 	cell, _ := ss.GetCell("Sheet1", 0, 2)
 	println(cell.Value.(int))
+
+	ss.UpdateCell(cell00.Uuid, `15`)
+	println(cell.Value.(int))
+
+	cell03, _ := ss.GetCell("Sheet1", 0, 3)
+	ss.UpdateCell(cell03.Uuid, `=Min(A1:C4)`)
+	println(cell03.Value.(int))
 }
