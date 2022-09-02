@@ -21,9 +21,10 @@ func main() {
 	println(cell.Value.(int))
 
 	ss.UpdateCell(cell00.Uuid, `15`)
-	println(cell.Value.(int))
+	println(`Cell00 value is now:`, cell00.Value.(int))
+	println(`Cell value is now:`, cell.Value.(int))
 
 	cell03, _ := ss.GetCell("Sheet1", 0, 3)
-	ss.UpdateCell(cell03.Uuid, `=Min(A1:C4)`)
+	ss.UpdateCell(cell03.Uuid, `=Sum(A1:C4)`)
 	println(cell03.Value.(int))
 }

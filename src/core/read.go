@@ -75,7 +75,7 @@ func (cr *Range) GetUuid() ReferenceId {
 }
 
 func (cr *Range) LowAtDimension(dimension uint64) int64 {
-	if dimension == 0 {
+	if dimension == 1 {
 		return int64(cr.StartRow)
 	} else {
 		return int64(cr.StartCol)
@@ -83,7 +83,7 @@ func (cr *Range) LowAtDimension(dimension uint64) int64 {
 }
 
 func (cr *Range) HighAtDimension(dimension uint64) int64 {
-	if dimension == 0 {
+	if dimension == 1 {
 		return int64(cr.EndRow)
 	} else {
 		return int64(cr.EndCol)
@@ -91,10 +91,10 @@ func (cr *Range) HighAtDimension(dimension uint64) int64 {
 }
 
 func (cr *Range) OverlapsAtDimension(interval augmentedtree.Interval, dimension uint64) bool {
-	if dimension == 0 {
-		return int64(cr.StartRow) <= interval.HighAtDimension(uint64(dimension)) && int64(cr.EndRow) >= interval.LowAtDimension(uint64(dimension))
+	if dimension == 1 {
+		return int64(cr.StartRow) <= interval.HighAtDimension(dimension) && int64(cr.EndRow) >= interval.LowAtDimension(dimension)
 	} else {
-		return int64(cr.StartCol) <= interval.HighAtDimension(uint64(dimension)) && int64(cr.EndCol) <= interval.LowAtDimension(uint64(dimension))
+		return int64(cr.StartCol) <= interval.HighAtDimension(dimension) && int64(cr.EndCol) >= interval.LowAtDimension(dimension)
 	}
 }
 

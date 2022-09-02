@@ -104,7 +104,7 @@ func (cell *Cell) dirty(visited mapset.Set[ReferenceId]) error {
 			ss.RangeDirtyParents[currRange.Uuid] = mapset.NewThreadUnsafeSet[ReferenceId]()
 		}
 		// Tracks the cells that need to be recomputed before recomputing the range.
-		ss.RangeDirtyParents[cell.Uuid].Add(currRange.Uuid)
+		ss.RangeDirtyParents[currRange.Uuid].Add(cell.Uuid)
 	}
 
 	// Dirty all dependent cells.
@@ -152,8 +152,8 @@ func (ss *Spreadsheet) recomputeValues() {
 			Cell: currCell,
 		})
 		currCell.Value, currCell.Error = res, err
-		currCell.Value = res
 	}
+	ss.DirtySet.Clear()
 }
 
 func (ss *Spreadsheet) cleanupRanges() {
