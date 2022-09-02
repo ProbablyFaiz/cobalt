@@ -63,4 +63,12 @@ func TestParse(t *testing.T) {
 	assert.Equal(t, p13.(*FunctionNode).Args[0].(*RangeNode).Start.Col, 2)
 	assert.Equal(t, p13.(*FunctionNode).Args[0].(*RangeNode).End.Row, 27)
 	assert.Equal(t, p13.(*FunctionNode).Args[0].(*RangeNode).End.Col, 3)
+	// Test floating point numbers
+	p14, _ := Parse(`=1.5`)
+	assert.Equal(t, p14.(*LiteralNode).Value.(float64), 1.5)
+	p15, _ := Parse(`=1.5 + 2.5`)
+	assert.Equal(t, p15.(*FunctionNode).Name, "+")
+	assert.Equal(t, len(p15.(*FunctionNode).Args), 2)
+	assert.Equal(t, p15.(*FunctionNode).Args[0].(*LiteralNode).Value.(float64), 1.5)
+	assert.Equal(t, p15.(*FunctionNode).Args[1].(*LiteralNode).Value.(float64), 2.5)
 }

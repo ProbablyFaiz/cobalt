@@ -121,10 +121,6 @@ func ExecuteFn(fnName string, args []interface{}) (interface{}, error) {
 		return functions.Count(args)
 	case "AVERAGE":
 		return functions.Average(args)
-	case "MIN":
-		return functions.Min(args)
-	case "MAX":
-		return functions.Max(args)
 	default:
 		return nil, fmt.Errorf("execute: unknown function %s", fnName)
 	}

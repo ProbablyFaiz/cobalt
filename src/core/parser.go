@@ -1,7 +1,6 @@
 package core
 
 import (
-	"fmt"
 	"github.com/alecthomas/participle/v2"
 	"github.com/alecthomas/participle/v2/lexer"
 	"strings"
@@ -30,13 +29,15 @@ type PArgument struct {
 }
 
 type PBareLiteral struct {
-	IntLiteral *int `@Int`
+	IntLiteral   *int     `@Int`
+	FloatLiteral *float64 `| @Float`
 	//StringLiteral *string `| @BareString`
 }
 
 type PArgLiteral struct {
-	IntLiteral    *int    `@Int`
-	StringLiteral *string `| @String`
+	IntLiteral    *int     `@Int`
+	FloatLiteral  *float64 `| @Float`
+	StringLiteral *string  `| @String`
 }
 
 type PFunctionCall struct {
@@ -58,6 +59,7 @@ var langLexer = lexer.MustSimple([]lexer.SimpleRule{
 	{"RangeSep", `:`},
 	{"A1Ref", `[A-Z]+[0-9]+`},
 	{"Ident", `[a-zA-Z_]\w*`},
+	{"Float", `[-+]?\d*\.\d+`},
 	{"Int", `[-+]?\d+`},
 	{"String", `"(\\"|[^"])*"`},
 	//{"BareString", `^[^=].*`},
@@ -127,14 +129,20 @@ func (argument *PArgument) toAst() FormulaNode {
 }
 
 func (literal *PBareLiteral) toAst() FormulaNode {
-	return &LiteralNode{Value: *literal.IntLiteral}
+	if literal.IntLiteral != nil {
+		return &LiteralNode{Value: *literal.IntLiteral}
+	}
+	return &LiteralNode{Value: *literal.FloatLiteral}
 }
 
 func (literal *PArgLiteral) toAst() FormulaNode {
 	if literal.StringLiteral != nil {
 		return &LiteralNode{Value: *literal.StringLiteral}
 	}
-	return &LiteralNode{Value: *literal.IntLiteral}
+	if literal.IntLiteral != nil {
+		return &LiteralNode{Value: *literal.IntLiteral}
+	}
+	return &LiteralNode{Value: *literal.FloatLiteral}
 }
 
 func (call *PFunctionCall) toAst() FormulaNode {
@@ -169,19 +177,4 @@ func (reference *PReference) toAst() FormulaNode {
 	}
 	endNode := &ReferenceNode{Row: endRow, Col: endCol}
 	return &RangeNode{Start: startNode, End: endNode}
-}
-
-func astToString(node FormulaNode) string {
-	switch node := node.(type) {
-	// Cases: literal node string, literal node int, function node, reference node
-	case *LiteralNode:
-		// Check if it's an int
-		if _, ok := node.Value.(int); ok {
-			return fmt.Sprintf("%d", node.Value)
-		}
-		return fmt.Sprintf(`"%s"`, node.Value)
-	case *FunctionNode:
-		return fmt.Sprintf("%s(%s)", node.Name, strings.Join(Map(node.Args, astToString), ", "))
-	}
-	return ""
 }
